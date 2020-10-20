@@ -1,16 +1,18 @@
 from django.contrib.auth.models import User
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, Http404
 from rest_framework import permissions, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_jwt.utils import jwt_decode_handler
+from rest_framework_jwt.serializers import VerifyJSONWebTokenSerializer
 
 from .models import Exercise
 from .serializers import (
+    ExerciseDetailSerializer,
+    ExerciseListSerializer,
     UserSerializer,
     UserSerializerWithToken,
-    ExerciseListSerializer,
-    ExerciseDetailSerializer,
 )
 
 
@@ -83,17 +85,33 @@ class ExerciseDetail(APIView):
 
     permission_classes = (permissions.IsAuthenticated,)
 
+    def get_object(self, pk):
+        try:
+            return Exercise.objects.get(pk=pk)
+        except Exercise.DoesNotExist:
+            raise Http404
+
     def get(self, request, exercise_id, format=None):
         """
         Detailed information about specific exercise.
         """
-        serializer = ExerciseDetailSerializer(
-            Exercise.objects.get(pk=exercise_id)
-        )
+        exercise = self.get_object(exercise_id)
+        serializer = ExerciseDetailSerializer(exercise)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def put(self, request, format=None):
+    def put(self, request, exercise_id, format=None):
         pass
 
-    def delete(self, request, format=None):
-        print(request)
+    def delete(self, request, exercise_id, format=None):
+        """
+        Delete specific exercise. This can be done only if the user requesting
+        delete is an exercise owner.
+        """
+        valid_data = VerifyJSONWebTokenSerializer().validate(
+            {'token': request.auth}
+        )
+        exercise = self.get_object(exercise_id)
+        if valid_data['user'] == exercise.owner:
+            exercise.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
