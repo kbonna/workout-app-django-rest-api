@@ -106,11 +106,13 @@ class Command(BaseCommand):
         Exercise(
             name='romanian single leg deadlift', kind='rep', owner=user
         ).save()
-        Exercise(name='pistol squat', kind='rep', owner=user).save()
-        Exercise(name='sumo walk', kind='rew', owner=user).save()
+        Exercise(
+            name='pistol squat', kind='rep', owner=user, forks_count=12
+        ).save()
+        Exercise(name='sumo walk', kind='rew', owner=user, forks_count=8).save()
         Exercise(name='calf raises', kind='rep', owner=user).save()
         Exercise(name='squat', kind='rew', owner=user).save()
-        Exercise(name='jogging', kind='dis', owner=user).save()
+        Exercise(name='jogging', kind='dis', owner=user, forks_count=2).save()
         Exercise(name='lunges', kind='rep', owner=user).save()
         Exercise(name='step ups', kind='rep', owner=user).save()
         Exercise(name='box jumps', kind='rep', owner=user).save()
@@ -130,6 +132,8 @@ class Command(BaseCommand):
         Exercise(name='sphinx push ups', kind='rep', owner=user).save()
         Exercise(name='hindu push ups', kind='rep', owner=user).save()
         Exercise(name='one arm push ups', kind='rep', owner=user).save()
+        Exercise(name='push ups', kind='rep', owner=user).save()
+        Exercise(name='pull ups', kind='rep', owner=user).save()
 
         ex = Exercise(
             name='plank',

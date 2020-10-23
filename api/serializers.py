@@ -7,32 +7,55 @@ from .models import Exercise, Muscle, Tag, YoutubeLink
 
 class ExerciseListSerializer(serializers.ModelSerializer):
     '''Brief exercise data meant to be displayed on the list of exercises.'''
+
     kind_display = serializers.CharField(source='get_kind_display')
+    can_be_forked = serializers.SerializerMethodField('_can_be_forked')
+
+    def _can_be_forked(self, obj):
+        user_id = self.context.get("user_id")
+        if user_id is not None:
+            return obj.can_be_forked(user_id)
+        return None
 
     class Meta:
         model = Exercise
-        fields = ('pk', 'name', 'kind_display')
+        fields = (
+            'pk',
+            'name',
+            'kind_display',
+            'owner',
+            'forks_count',
+            'can_be_forked',
+        )
+
 
 class ExerciseDetailSerializer(serializers.ModelSerializer):
     '''Detailed exercise data displayed on exercise page.'''
+
     tags = serializers.StringRelatedField(read_only=True, many=True)
     muscles = serializers.StringRelatedField(read_only=True, many=True)
     tutorials = serializers.StringRelatedField(read_only=True, many=True)
     kind_display = serializers.CharField(source='get_kind_display')
     owner_username = serializers.SlugRelatedField(
-        read_only=True,
-        slug_field='owner_username'
-        )
+        read_only=True, slug_field='owner_username'
+    )
 
     class Meta:
         model = Exercise
-        fields = ('pk', 'name', 'kind_display', 'instructions',
-                  'owner_username', 'forks_count', 'tags', 'tutorials',
-                  'muscles')
+        fields = (
+            'pk',
+            'name',
+            'kind_display',
+            'instructions',
+            'owner_username',
+            'forks_count',
+            'tags',
+            'tutorials',
+            'muscles',
+        )
 
 
 class UserSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = User
         fields = ('username', 'pk')

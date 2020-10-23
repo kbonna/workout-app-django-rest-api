@@ -51,6 +51,7 @@ class UserList(APIView):
 class ExerciseList(APIView):
 
     permission_classes = (permissions.IsAuthenticated,)
+    # permission_classes = (permissions.AllowAny,)
 
     def post(self, request, format=None):
         """
@@ -69,14 +70,24 @@ class ExerciseList(APIView):
         Querystring params:
             ?user=<int>:
                 Exercises for user with specific pk.
+            ?discover=<bool>:
+                Parameter for discover tab. If True, all exercise not owned by
+                the user will be returned.
         """
-        owner = request.GET.get('user', None)
-        if owner:
-            queryset = Exercise.objects.filter(owner=owner)
+        user_id = request.GET.get('user', None)
+        discover = request.GET.get('discover', False)
+
+        if user_id:
+            if discover:
+                queryset = Exercise.objects.all().exclude(owner=user_id)
+            else:
+                queryset = Exercise.objects.filter(owner=user_id)
         else:
             queryset = Exercise.objects.all()
 
-        serializer = ExerciseListSerializer(queryset, many=True)
+        serializer = ExerciseListSerializer(
+            queryset, context={'user_id': user_id}, many=True
+        )
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 

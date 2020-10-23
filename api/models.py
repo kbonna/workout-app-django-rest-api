@@ -75,3 +75,10 @@ class Exercise(models.Model):
 
     def __str__(self):
         return self.name
+
+    def can_be_forked(self, userId):
+        '''Determine if user with userId already have any exercise with this 
+        exercise name. In such case exercise cannot be forked.'''
+        if Exercise.objects.filter(name=self.name, owner=userId):
+            return False
+        return True
