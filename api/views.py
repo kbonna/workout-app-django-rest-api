@@ -4,15 +4,12 @@ from rest_framework import permissions, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_jwt.utils import jwt_decode_handler
-from rest_framework_jwt.serializers import VerifyJSONWebTokenSerializer
 
 from .models import Exercise
 from .serializers import (
     ExerciseDetailSerializer,
     ExerciseListSerializer,
     UserSerializer,
-    UserSerializerWithToken,
 )
 
 
@@ -34,7 +31,11 @@ class UserList(APIView):
     permission_classes = (permissions.AllowAny,)
 
     def post(self, request, format=None):
-        serializer = UserSerializerWithToken(data=request.data)
+        """
+        Creates new user. Data passed in request has to contain username and
+        password.
+        """
+        serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -50,8 +51,8 @@ class UserList(APIView):
 
 class ExerciseList(APIView):
 
-    permission_classes = (permissions.IsAuthenticated,)
     # permission_classes = (permissions.AllowAny,)
+    permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, format=None):
         """
@@ -94,6 +95,7 @@ class ExerciseList(APIView):
 
 class ExerciseDetail(APIView):
 
+    # permission_classes = (permissions.AllowAny,)
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_object(self, pk):
@@ -113,16 +115,20 @@ class ExerciseDetail(APIView):
     def put(self, request, exercise_id, format=None):
         pass
 
+    def post(self, request, exercise_id, format=None):
+        """
+        Fork.
+        """
+        print(request.user)
+        return Response(status=status.HTTP_200_OK)
+
     def delete(self, request, exercise_id, format=None):
         """
         Delete specific exercise. This can be done only if the user requesting
         delete is an exercise owner.
         """
-        valid_data = VerifyJSONWebTokenSerializer().validate(
-            {'token': request.auth}
-        )
         exercise = self.get_object(exercise_id)
-        if valid_data['user'] == exercise.owner:
+        if request.user == exercise.owner:
             exercise.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(status=status.HTTP_400_BAD_REQUEST)
