@@ -29,29 +29,24 @@ class ExerciseListSerializer(serializers.ModelSerializer):
         )
 
 
-class ExerciseDetailSerializer(serializers.ModelSerializer):
+class ExerciseDetailSerializer(ExerciseListSerializer):
     '''Detailed exercise data displayed on exercise page.'''
 
     tags = serializers.StringRelatedField(read_only=True, many=True)
     muscles = serializers.StringRelatedField(read_only=True, many=True)
     tutorials = serializers.StringRelatedField(read_only=True, many=True)
-    kind_display = serializers.CharField(source='get_kind_display')
-    owner_username = serializers.SlugRelatedField(
-        read_only=True, slug_field='owner_username'
+    owner_username = serializers.CharField(
+        source='owner.username', read_only=True
     )
 
-    class Meta:
+    class Meta(ExerciseListSerializer.Meta):
         model = Exercise
-        fields = (
-            'pk',
-            'name',
-            'kind_display',
-            'instructions',
+        fields = ExerciseListSerializer.Meta.fields + (
             'owner_username',
-            'forks_count',
             'tags',
-            'tutorials',
             'muscles',
+            'tutorials',
+            'instructions',
         )
 
 

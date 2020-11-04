@@ -95,8 +95,8 @@ class ExerciseList(APIView):
 
 class ExerciseDetail(APIView):
 
-    # permission_classes = (permissions.AllowAny,)
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.AllowAny,)
+    # permission_classes = (permissions.IsAuthenticated,)
 
     def get_object(self, pk):
         try:
@@ -109,7 +109,9 @@ class ExerciseDetail(APIView):
         Detailed information about specific exercise.
         """
         exercise = self.get_object(exercise_id)
-        serializer = ExerciseDetailSerializer(exercise)
+        serializer = ExerciseDetailSerializer(
+            exercise, context={'user_id': request.user.pk}
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, exercise_id, format=None):
