@@ -9,6 +9,7 @@ from .models import Exercise
 from .serializers import (
     ExerciseDetailSerializer,
     ExerciseListSerializer,
+    ExerciseCreateSerializer,
     UserSerializer,
 )
 
@@ -58,10 +59,12 @@ class ExerciseList(APIView):
         """
         Adds new exercise for specic user.
         """
-        serializer = ExerciseListSerializer(data=request.data)
+        serializer = ExerciseCreateSerializer(
+            data={**request.data, "owner": request.user.pk}
+        )
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response({"msg": "ok"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request, format=None):

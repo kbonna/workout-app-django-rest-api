@@ -7,6 +7,7 @@ import django
 from api.models import Exercise, Muscle, Tag, YoutubeLink
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
+from lorem_text import lorem
 
 random.seed(0)
 # May not be useful anymore
@@ -68,7 +69,9 @@ class Command(BaseCommand):
         CHARSET = string.ascii_letters + string.digits
         for i in range(100):
             video_code = ''.join(random.choices(CHARSET, k=7))
-            YoutubeLink(querystring=video_code).save()
+            YoutubeLink(
+                url=f'https://www.youtube.com/watch?v={video_code}'
+            ).save()
 
         # Create muscles
         for muscle_abbrev, muscle_name in Muscle.MUSCLES:
@@ -102,24 +105,83 @@ class Command(BaseCommand):
         ex.tutorials.set([YoutubeLink.objects.all()[20]])
         ex.muscles.set([Muscle.objects.get(name='tra')])
 
-        Exercise(name='bulgarian split squat', kind='rep', owner=user).save()
         Exercise(
-            name='romanian single leg deadlift', kind='rep', owner=user
+            name='bulgarian split squat',
+            kind='rep',
+            instructions=lorem.words(10),
+            owner=user,
         ).save()
         Exercise(
-            name='pistol squat', kind='rep', owner=user, forks_count=12
+            name='romanian single leg deadlift',
+            kind='rep',
+            instructions=lorem.words(20),
+            owner=user,
         ).save()
-        Exercise(name='sumo walk', kind='rew', owner=user, forks_count=8).save()
-        Exercise(name='calf raises', kind='rep', owner=user).save()
-        Exercise(name='squat', kind='rew', owner=user).save()
-        Exercise(name='jogging', kind='dis', owner=user, forks_count=2).save()
-        Exercise(name='lunges', kind='rep', owner=user).save()
-        Exercise(name='step ups', kind='rep', owner=user).save()
-        Exercise(name='box jumps', kind='rep', owner=user).save()
-        Exercise(name='bridge', kind='tim', owner=user).save()
-        Exercise(name='dance', kind='tim', owner=user).save()
-        Exercise(name='intervals run', kind='tim', owner=user).save()
-        Exercise(name='hip thrust', kind='rew', owner=user).save()
+        Exercise(
+            name='pistol squat',
+            kind='rep',
+            instructions=lorem.words(30),
+            owner=user,
+            forks_count=12,
+        ).save()
+        Exercise(
+            name='sumo walk',
+            kind='rew',
+            instructions=lorem.words(100),
+            owner=user,
+            forks_count=8,
+        ).save()
+        Exercise(
+            name='calf raises',
+            kind='rep',
+            owner=user,
+        ).save()
+        Exercise(
+            name='squat',
+            kind='rew',
+            owner=user,
+        ).save()
+        Exercise(
+            name='jogging',
+            kind='dis',
+            owner=user,
+            forks_count=2,
+        ).save()
+        Exercise(
+            name='lunges',
+            kind='rep',
+            owner=user,
+        ).save()
+        Exercise(
+            name='step ups',
+            kind='rep',
+            owner=user,
+        ).save()
+        Exercise(
+            name='box jumps',
+            kind='rep',
+            owner=user,
+        ).save()
+        Exercise(
+            name='bridge',
+            kind='tim',
+            owner=user,
+        ).save()
+        Exercise(
+            name='dance',
+            kind='tim',
+            owner=user,
+        ).save()
+        Exercise(
+            name='intervals run',
+            kind='tim',
+            owner=user,
+        ).save()
+        Exercise(
+            name='hip thrust',
+            kind='rew',
+            owner=user,
+        ).save()
 
         # Create exercises for userId: 3
         user = User.objects.get(pk=3)

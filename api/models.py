@@ -13,17 +13,11 @@ class Tag(models.Model):
 
 
 class YoutubeLink(models.Model):
-    '''Youtube links used to represent tutorial videos for exercises. It is
-    represented only by value for v key in URI querystring.'''
-    querystring = models.CharField(max_length=100, unique=True)
+    '''Youtube links used to represent tutorial videos for exercises.'''
+    url = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
-        return self.querystring
-
-    def url(self):
-        '''Full url to youtube video.'''
-        return f'https://www.youtube.com/watch?v={self.querystring}'
-
+        return self.url
 
 class Muscle(models.Model):
     ''''Muscle names used for graphical representation of muscle groups trained
@@ -31,19 +25,25 @@ class Muscle(models.Model):
     corresponding to each muscle choice.'''
 
     MUSCLES = (
-        ('cal', 'Calves'),
-        ('qua', 'Quadriceps'),
-        ('ham', 'Hamstrings'),
-        ('glu', 'Gluteus'),
-        ('lob', 'Lower back'),
-        ('lat', 'Lats'),
-        ('tra', 'Trapezius'),
-        ('abs', 'Abdominals'),
-        ('pec', 'Pectorals'),
-        ('del', 'Deltoids'),
-        ('tri', 'Triceps'),
+        # Lower body    
+        ('cal', 'Calves'),        
+        ('qua', 'Quadriceps'),  
+        ('ham', 'Hamstrings'),  
+        ('glu', 'Gluteus'),     
+        # Back 
+        ('lob', 'Lower back'),   
+        ('lat', 'Lats'),        
+        ('sca', 'Scapular muscles'),
+        # Front
+        ('abs', 'Abdominals'),    
+        ('pec', 'Pectorals'),   
+        # Top
+        ('tra', 'Trapezius'),      
+        ('del', 'Deltoids'),    
+        # Arms
+        ('tri', 'Triceps'),          
         ('bic', 'Biceps'),
-        ('for', 'Forearms')
+        ('for', 'Forearms') 
     )
 
     name = models.CharField(max_length=3, choices=MUSCLES, unique=True)
