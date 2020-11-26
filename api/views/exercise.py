@@ -1,53 +1,10 @@
-from django.contrib.auth.models import User
-from django.http import HttpResponseRedirect, Http404
+from django.http import Http404
 from rest_framework import permissions, status
-from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Exercise
-from .serializers import (
-    ExerciseDetailSerializer,
-    ExerciseListSerializer,
-    ExerciseCreateSerializer,
-    UserSerializer,
-)
-
-
-@api_view(['GET'])
-def current_user(request):
-    """
-    Determine the current user by their token, and return their data
-    """
-    serializer = UserSerializer(request.user)
-    return Response(serializer.data)
-
-
-class UserList(APIView):
-    """
-    Create a new user. It's called 'UserList' because normally we'd have a get
-    method here too, for retrieving a list of all User objects.
-    """
-
-    permission_classes = (permissions.AllowAny,)
-
-    def post(self, request, format=None):
-        """
-        Creates new user. Data passed in request has to contain username and
-        password.
-        """
-        serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def get(self, request, format=None):
-        users = [user for user in User.objects.all()]
-        serializer = UserSerializer(data=users, many=True)
-        if serializer.is_valid():
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.data)
+from api.models import Exercise
+from api.serializers.exercise import ExerciseSerializer
 
 
 class ExerciseList(APIView):
@@ -59,12 +16,10 @@ class ExerciseList(APIView):
         """
         Adds new exercise for specic user.
         """
-        serializer = ExerciseCreateSerializer(
-            data={**request.data, "owner": request.user.pk}
-        )
+        serializer = ExerciseSerializer(data={**request.data, "owner": request.user.pk})
         if serializer.is_valid():
             serializer.save()
-            return Response({"msg": "ok"}, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request, format=None):
@@ -78,8 +33,8 @@ class ExerciseList(APIView):
                 Parameter for discover tab. If True, all exercise not owned by
                 the user will be returned.
         """
-        user_id = request.GET.get('user', None)
-        discover = request.GET.get('discover', False)
+        user_id = request.GET.get("user", None)
+        discover = request.GET.get("discover", False)
 
         if user_id:
             if discover:
@@ -89,17 +44,15 @@ class ExerciseList(APIView):
         else:
             queryset = Exercise.objects.all()
 
-        serializer = ExerciseListSerializer(
-            queryset, context={'user_id': user_id}, many=True
-        )
+        serializer = ExerciseSerializer(queryset, context={"user_id": user_id}, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ExerciseDetail(APIView):
 
-    permission_classes = (permissions.AllowAny,)
-    # permission_classes = (permissions.IsAuthenticated,)
+    # permission_classes = (permissions.AllowAny,)
+    permission_classes = (permissions.IsAuthenticated,)
 
     def get_object(self, pk):
         try:
@@ -112,13 +65,13 @@ class ExerciseDetail(APIView):
         Detailed information about specific exercise.
         """
         exercise = self.get_object(exercise_id)
-        serializer = ExerciseDetailSerializer(
-            exercise, context={'user_id': request.user.pk}
-        )
+        serializer = ExerciseSerializer(exercise, context={"user_id": request.user.pk})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, exercise_id, format=None):
-        pass
+        """Edit exercise."""
+
+        return Response(status=status.HTTP_200_OK)
 
     def post(self, request, exercise_id, format=None):
         """

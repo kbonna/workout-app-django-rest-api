@@ -19,37 +19,34 @@ class YoutubeLink(models.Model):
     def __str__(self):
         return self.url
 
+
 class Muscle(models.Model):
     ''''Muscle names used for graphical representation of muscle groups trained
     during the exercise. This table should be read only and contain rows
     corresponding to each muscle choice.'''
 
     MUSCLES = (
-        # Lower body    
-        ('cal', 'Calves'),        
-        ('qua', 'Quadriceps'),  
-        ('ham', 'Hamstrings'),  
-        ('glu', 'Gluteus'),     
-        # Back 
-        ('lob', 'Lower back'),   
-        ('lat', 'Lats'),        
+        ('cal', 'Calves'),
+        ('qua', 'Quadriceps'),
+        ('ham', 'Hamstrings'),
+        ('glu', 'Gluteus'),
+        ('lob', 'Lower back'),
+        ('lat', 'Lats'),
         ('sca', 'Scapular muscles'),
-        # Front
-        ('abs', 'Abdominals'),    
-        ('pec', 'Pectorals'),   
-        # Top
-        ('tra', 'Trapezius'),      
-        ('del', 'Deltoids'),    
-        # Arms
-        ('tri', 'Triceps'),          
+        ('abs', 'Abdominals'),
+        ('pec', 'Pectorals'),
+        ('tra', 'Trapezius'),
+        ('del', 'Deltoids'),
+        ('tri', 'Triceps'),
         ('bic', 'Biceps'),
-        ('for', 'Forearms') 
+        ('for', 'Forearms'),
     )
 
     name = models.CharField(max_length=3, choices=MUSCLES, unique=True)
 
     def __str__(self):
         return self.name
+
 
 class Exercise(models.Model):
     '''Basic app entity used to represent single exercise.'''
@@ -74,11 +71,11 @@ class Exercise(models.Model):
         unique_together = [['name', 'owner']]
 
     def __str__(self):
-        return self.name
+        return f'Exercise(name={self.name}, type={self.kind}, owner={self.owner})'
 
     def can_be_forked(self, userId):
-        '''Determine if user with userId already have any exercise with this 
-        exercise name. In such case exercise cannot be forked.'''
+        """Determine if user with userId already have any exercise with this
+        exercise name. In such case exercise cannot be forked."""
         if Exercise.objects.filter(name=self.name, owner=userId):
             return False
         return True
