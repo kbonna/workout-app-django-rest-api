@@ -3,9 +3,9 @@ import re
 import string
 
 youtube_regex = (
-    r'(https?://)?(www\.)?'
-    '(youtube|youtu|youtube-nocookie)\.(com|be)/'
-    '(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})'
+    r"(https?://)?(www\.)?"
+    "(youtube|youtu|youtube-nocookie)\.(com|be)/"
+    "(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})"
 )
 youtube_pattern = re.compile(youtube_regex)
 
@@ -18,8 +18,6 @@ def youtube_link(url, pattern=youtube_pattern):
 
 def only_letters_and_numbers(s):
     """Determine if string s is does not contain illegal characters."""
-    character_set = (
-        string.ascii_lowercase + string.ascii_uppercase + string.digits
-    )
+    character_set = string.ascii_lowercase + string.ascii_uppercase + string.digits
     if any((ch not in character_set for ch in s)):
         raise ValidationError("This can only contain letters and digits")

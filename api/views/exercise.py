@@ -61,17 +61,23 @@ class ExerciseDetail(APIView):
             raise Http404
 
     def get(self, request, exercise_id, format=None):
-        """
-        Detailed information about specific exercise.
-        """
+        """Information about specific exercise."""
         exercise = self.get_object(exercise_id)
         serializer = ExerciseSerializer(exercise, context={"user_id": request.user.pk})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, exercise_id, format=None):
-        """Edit exercise."""
-
-        return Response(status=status.HTTP_200_OK)
+        """Edit exercise data."""
+        exercise = self.get_object(exercise_id)
+        if request.user == exercise.owner:
+            serializer = ExerciseSerializer(
+                exercise, data={**request.data, "owner": request.user.pk}
+            )
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_403_FORBIDDEN)
 
     def post(self, request, exercise_id, format=None):
         """
@@ -89,4 +95,4 @@ class ExerciseDetail(APIView):
         if request.user == exercise.owner:
             exercise.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_403_FORBIDDEN)

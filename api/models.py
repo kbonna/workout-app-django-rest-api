@@ -71,7 +71,7 @@ class Exercise(models.Model):
         unique_together = [['name', 'owner']]
 
     def __str__(self):
-        return f'Exercise(name={self.name}, type={self.kind}, owner={self.owner})'
+        return f'Exercise(name={self.name}, kind={self.kind}, owner={self.owner})'
 
     def can_be_forked(self, userId):
         """Determine if user with userId already have any exercise with this
