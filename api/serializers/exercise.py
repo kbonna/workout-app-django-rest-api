@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 
 from ..models import Exercise, Tag, Muscle, YoutubeLink
 from api.serializers.muscle import MuscleSerializer
@@ -35,12 +36,30 @@ class ExerciseSerializer(serializers.ModelSerializer):
         for tutorial_data in tutorials:
             instance.tutorials.add(YoutubeLink.objects.get_or_create(**tutorial_data)[0])
         for muscle_data in muscles:
-            instance.muscles.add(Muscle.objects.get(name=muscle_data["name"]))
+            instance.muscles.add(Muscle.objects.get(**muscle_data))
 
         return instance
 
     def update(self, instance, validated_data):
         instance.name = validated_data.get("name")
+        instance.kind = validated_data.get("kind")
+        instance.instructions = validated_data.get("instructions")
+
+        # Update many-to-many relations
+        new_tags = [
+            Tag.objects.get_or_create(**tag_data)[0] for tag_data in validated_data.get("tags")
+        ]
+        new_tutorials = [
+            YoutubeLink.objects.get_or_create(**tutorial_data)[0]
+            for tutorial_data in validated_data.get("tutorials")
+        ]
+        new_muscles = [
+            Muscle.objects.get(**muscle_data) for muscle_data in validated_data.get("muscles")
+        ]
+        instance.tags.set(new_tags)
+        instance.tutorials.set(new_tutorials)
+        instance.muscles.set(new_muscles)
+
         instance.save()
 
         return instance
@@ -61,3 +80,10 @@ class ExerciseSerializer(serializers.ModelSerializer):
             "tutorials",
             "instructions",
         )
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Exercise.objects.all(),
+                fields=["name", "owner"],
+                message="You already own this exercise.",
+            )
+        ]

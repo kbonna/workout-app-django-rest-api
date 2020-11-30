@@ -3,9 +3,8 @@ from django.db import models
 
 
 class Tag(models.Model):
-    '''Tags used to label exercises. They are global and can be added by all
-    users. They are only removed if all exercises with corresponding tags are
-    removed.'''
+    '''Tags used to label exercises. They are global and can be added by all users. They can only be
+    removed if all exercises (and other related enities) with corresponding tags are removed.'''
     name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
@@ -21,9 +20,8 @@ class YoutubeLink(models.Model):
 
 
 class Muscle(models.Model):
-    ''''Muscle names used for graphical representation of muscle groups trained
-    during the exercise. This table should be read only and contain rows
-    corresponding to each muscle choice.'''
+    ''''Muscle names used for graphical representation of muscle groups trained during the exercise.
+    This table should be read only and contain rows corresponding to each muscle choice.'''
 
     MUSCLES = (
         ('cal', 'Calves'),
@@ -74,8 +72,8 @@ class Exercise(models.Model):
         return f'Exercise(name={self.name}, kind={self.kind}, owner={self.owner})'
 
     def can_be_forked(self, userId):
-        """Determine if user with userId already have any exercise with this
-        exercise name. In such case exercise cannot be forked."""
+        """Determine if user with userId already have any exercise with this exercise name. In such
+        case exercise cannot be forked."""
         if Exercise.objects.filter(name=self.name, owner=userId):
             return False
         return True

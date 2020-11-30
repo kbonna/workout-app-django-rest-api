@@ -13,9 +13,7 @@ class ExerciseList(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, format=None):
-        """
-        Adds new exercise for specic user.
-        """
+        """Adds new exercise for specic user."""
         serializer = ExerciseSerializer(data={**request.data, "owner": request.user.pk})
         if serializer.is_valid():
             serializer.save()
@@ -23,8 +21,7 @@ class ExerciseList(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request, format=None):
-        """
-        Return a list of all exercises.
+        """Return a list of all exercises.
 
         Querystring params:
             ?user=<int>:
@@ -61,13 +58,14 @@ class ExerciseDetail(APIView):
             raise Http404
 
     def get(self, request, exercise_id, format=None):
-        """Information about specific exercise."""
+        """Get information about specific exercise."""
         exercise = self.get_object(exercise_id)
         serializer = ExerciseSerializer(exercise, context={"user_id": request.user.pk})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, exercise_id, format=None):
-        """Edit exercise data."""
+        """Edit exercise data. This can be done only if the user requesting edot is an exercise
+        owner."""
         exercise = self.get_object(exercise_id)
         if request.user == exercise.owner:
             serializer = ExerciseSerializer(
@@ -80,16 +78,15 @@ class ExerciseDetail(APIView):
         return Response(status=status.HTTP_403_FORBIDDEN)
 
     def post(self, request, exercise_id, format=None):
-        """
-        Fork.
+        """Fork (copy) exercise. This operation creates new exercise with all internal values
+        copied but new owner. New owner is the author of the request.
         """
         print(request.user)
         return Response(status=status.HTTP_200_OK)
 
     def delete(self, request, exercise_id, format=None):
-        """
-        Delete specific exercise. This can be done only if the user requesting
-        delete is an exercise owner.
+        """Delete specific exercise. This can be done only if the user requesting delete is an
+        exercise owner.
         """
         exercise = self.get_object(exercise_id)
         if request.user == exercise.owner:

@@ -136,7 +136,7 @@ class ExerciseTest(APITestCase):
         url = reverse("exercises-detail", kwargs={"exercise_id": exercise_to_delete.pk})
         response = self.client.delete(url)
 
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 403)
         self.assertEqual(len(Exercise.objects.all()), n_exercises_before)
         self.assertEqual
         try:
@@ -234,5 +234,25 @@ class ExerciseTest(APITestCase):
 
         self.assertEqual(response.status_code, 200)
 
+        edited_exercise = Exercise.objects.get(pk=exercise_to_edit.pk)
+        self.assertEqual(edited_exercise.name, json_data["name"])
+        self.assertEqual(edited_exercise.kind, json_data["kind"])
+        self.assertEqual(edited_exercise.owner, self.owner)
+        self.assertEqual(edited_exercise.owner.username, self.owner.username)
+        self.assertEqual(edited_exercise.forks_count, 0)
+        self.assertListEqual(
+            [{"name": tag.name} for tag in edited_exercise.tags.all()], json_data["tags"]
+        )
+        self.assertListEqual(
+            [{"name": mus.name} for mus in edited_exercise.muscles.all()], json_data["muscles"]
+        )
+        self.assertListEqual(
+            [{"url": tut.url} for tut in edited_exercise.tutorials.all()], json_data["tutorials"]
+        )
+        self.assertEqual(edited_exercise.instructions, json_data["instructions"])
+
     def test_edit_exercise_fail(self):
+        pass
+
+    def test_edit_exercise_errors(self):
         pass
