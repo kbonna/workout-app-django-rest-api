@@ -1,4 +1,6 @@
 from django.http import Http404
+from django.db.utils import IntegrityError
+from django.db.models.fields.related import ManyToManyField
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -81,8 +83,28 @@ class ExerciseDetail(APIView):
         """Fork (copy) exercise. This operation creates new exercise with all internal values
         copied but new owner. New owner is the author of the request.
         """
-        print(request.user)
-        return Response(status=status.HTTP_200_OK)
+        exercise = self.get_object(exercise_id)
+
+        many_to_many_fieldnames = [
+            field.name
+            for field in exercise._meta.get_fields()
+            if isinstance(field, ManyToManyField)
+        ]
+        many_to_many_objects = {
+            field: getattr(exercise, field).all() for field in many_to_many_fieldnames
+        }
+
+        exercise.pk = None
+        exercise.owner = request.user
+        try:
+            exercise.save()  # pk was set to None, so new db instance will be created
+        except IntegrityError:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+        for field, queryset in many_to_many_objects.items():
+            getattr(exercise, field).set(queryset)
+
+        return Response(status=status.HTTP_201_CREATED)
 
     def delete(self, request, exercise_id, format=None):
         """Delete specific exercise. This can be done only if the user requesting delete is an

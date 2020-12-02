@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.forms.models import model_to_dict
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -6,7 +7,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from ..models import Exercise, Muscle, Tag, YoutubeLink
 
 
-class ExerciseTest(APITestCase):
+class ExtendedAPITestCase(APITestCase):
+    def assertInstancesEquals(self, first, second):
+        self.assertEquals(str(model_to_dict(first)), str(model_to_dict(first)))
+
+
+class ExerciseTest(ExtendedAPITestCase):
 
     YT_URL = "https://www.youtube.com/watch?v="
     EXERCISE_SERIALIZER_FIELDS = [
@@ -138,7 +144,6 @@ class ExerciseTest(APITestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(len(Exercise.objects.all()), n_exercises_before)
-        self.assertEqual
         try:
             self.other_user.exercise_set.get(name="exercise 1")
         except Exercise.DoesNotExist:
@@ -252,7 +257,79 @@ class ExerciseTest(APITestCase):
         self.assertEqual(edited_exercise.instructions, json_data["instructions"])
 
     def test_edit_exercise_fail(self):
-        pass
+        json_data = {
+            "name": "exercise 1 edited",
+            "kind": "tim",
+            "tags": [],
+            "muscles": [],
+            "tutorials": [],
+            "instructions": "",
+        }
+
+        exercise_to_edit = Exercise.objects.get(owner=self.other_user.pk, name="exercise 1")
+        before_str = str(model_to_dict(exercise_to_edit))
+
+        url = reverse("exercises-detail", kwargs={"exercise_id": exercise_to_edit.pk})
+        response = self.client.put(url, json_data, format="json")
+
+        self.assertEqual(response.status_code, 403)
+
+        after_str = str(
+            model_to_dict(Exercise.objects.get(owner=self.other_user.pk, name="exercise 1"))
+        )
+        self.assertEquals(before_str, after_str)
 
     def test_edit_exercise_errors(self):
-        pass
+        json_data = {
+            "name": "",
+            "kind": "xxx",
+            "tags": [{"name": "x x"}, {"name": "??"}, {"name": ""}],
+            "muscles": [{"name": "xx1"}],
+            "tutorials": [
+                {"url": "https://www.youtube.com/"},
+                {"url": ""},
+                {"url": "https://www.xoutube.com/watch?v=AAAAAAAAAAA"},
+            ],
+        }
+
+        exercise_to_edit = Exercise.objects.get(owner=self.owner.pk, name="exercise 1")
+        before_str = str(model_to_dict(exercise_to_edit))
+
+        url = reverse("exercises-detail", kwargs={"exercise_id": exercise_to_edit.pk})
+        response = self.client.put(url, json_data, format="json")
+
+        self.assertEqual(response.status_code, 400)
+        for field, value in json_data.items():
+            self.assertTrue(field in response.data, msg=f"{field} should give validation error")
+            if isinstance(value, list):
+                self.assertEqual(
+                    len(value),
+                    len(response.data[field]),
+                    msg=f"{field} should give {len(value)} validation errors"
+                    + f" but gave {len(response.data[field])}",
+                )
+
+        after_str = str(model_to_dict(Exercise.objects.get(owner=self.owner.pk, name="exercise 1")))
+        self.assertEquals(before_str, after_str)
+
+    def test_edit_exercise_name_collision(self):
+        json_data = {
+            "name": "exercise 2",
+            "kind": "rew",
+            "tags": [],
+            "muscles": [],
+            "tutorials": [],
+            "instructions": "",
+        }
+
+        exercise_to_edit = Exercise.objects.get(owner=self.owner.pk, name="exercise 1")
+        before_str = str(model_to_dict(exercise_to_edit))
+
+        url = reverse("exercises-detail", kwargs={"exercise_id": exercise_to_edit.pk})
+        response = self.client.put(url, json_data, format="json")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue("non_field_errors" in response.data)
+
+        after_str = str(model_to_dict(Exercise.objects.get(owner=self.owner.pk, name="exercise 1")))
+        self.assertEquals(before_str, after_str)
