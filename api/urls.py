@@ -4,7 +4,7 @@ from .views.exercise import ExerciseList, ExerciseDetail
 
 urlpatterns = [
     path("current_user/", current_user),
-    path("users/", UserList.as_view(), name="users-list"),
-    path("exercises/", ExerciseList.as_view(), name="exercises-list"),
-    path("exercises/<int:exercise_id>", ExerciseDetail.as_view(), name="exercises-detail"),
+    path("users/", UserList.as_view(), name="user-list"),
+    path("exercises/", ExerciseList.as_view(), name="exercise-list"),
+    path("exercises/<int:exercise_id>", ExerciseDetail.as_view(), name="exercise-detail"),
 ]

@@ -96,6 +96,7 @@ class ExerciseDetail(APIView):
 
         exercise.pk = None
         exercise.owner = request.user
+        exercise.forks_count = 0
         try:
             exercise.save()  # pk was set to None, so new db instance will be created
         except IntegrityError:
@@ -103,6 +104,11 @@ class ExerciseDetail(APIView):
 
         for field, queryset in many_to_many_objects.items():
             getattr(exercise, field).set(queryset)
+
+        # increase forks count
+        exercise = self.get_object(exercise_id)
+        exercise.forks_count += 1
+        exercise.save()
 
         return Response(status=status.HTTP_201_CREATED)
 
