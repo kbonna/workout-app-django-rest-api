@@ -1,6 +1,5 @@
 from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
-from django.db import transaction
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -34,6 +33,17 @@ class ExerciseTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
 
     def assertCorrectExercise(self, exercise_dict, exercise_obj, user_request):
+        """Custom assertion for this APITestCase checking whether exercise dict retrieved from API
+        response match underlying database entry.
+
+        Args:
+            exercise_dict (dict):
+                Deserialized API response representing single exercise.
+            exercise_obj (api.models.Exercise):
+                Exercise model instance.
+            user_request (User):
+                User model instance corresponding to the user making request.
+        """
         self.assertEqual(set(exercise_dict.keys()), set(self.EXERCISE_SERIALIZER_FIELDS))
 
         self.assertEqual(exercise_dict["pk"], exercise_obj.pk)
@@ -395,6 +405,7 @@ class ExerciseTest(APITestCase):
             )
 
     def test_fork_exercise_name_collision(self):
+        """Try to fork exercise of other user when you already own an exercise with same name."""
         n_exercises_before = len(Exercise.objects.all())
         exercise_to_fork = Exercise.objects.get(owner=self.other_user.pk, name="exercise 1")
 
@@ -402,6 +413,15 @@ class ExerciseTest(APITestCase):
         response = self.client.post(url)
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        with transaction.atomic():
-            x = len(Exercise.objects.all())
-        self.assertEqual(x, n_exercises_before)
+        self.assertEqual(len(Exercise.objects.all()), n_exercises_before)
+
+    def test_fork_exercise_fail(self):
+        """Try to fork your own exercise"""
+        n_exercises_before = len(Exercise.objects.all())
+        exercise_to_fork = Exercise.objects.get(owner=self.owner.pk, name="exercise 1")
+
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_id": exercise_to_fork.pk})
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(len(Exercise.objects.all()), n_exercises_before)

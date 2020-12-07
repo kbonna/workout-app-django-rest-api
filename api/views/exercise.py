@@ -1,5 +1,4 @@
 from django.http import Http404
-from django.db.utils import IntegrityError
 from django.db.models.fields.related import ManyToManyField
 from rest_framework import permissions, status
 from rest_framework.response import Response
@@ -85,6 +84,10 @@ class ExerciseDetail(APIView):
         """
         exercise = self.get_object(exercise_id)
 
+        # Detect name collision
+        if Exercise.objects.filter(owner=request.user, name=exercise.name).count():
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
         many_to_many_fieldnames = [
             field.name
             for field in exercise._meta.get_fields()
@@ -97,10 +100,7 @@ class ExerciseDetail(APIView):
         exercise.pk = None
         exercise.owner = request.user
         exercise.forks_count = 0
-        try:
-            exercise.save()  # pk was set to None, so new db instance will be created
-        except IntegrityError:
-            return Response(status=status.HTTP_403_FORBIDDEN)
+        exercise.save()  # pk was set to None, so new db instance will be created
 
         for field, queryset in many_to_many_objects.items():
             getattr(exercise, field).set(queryset)
