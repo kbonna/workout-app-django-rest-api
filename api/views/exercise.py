@@ -81,12 +81,19 @@ class ExerciseDetail(APIView):
     def post(self, request, exercise_id, format=None):
         """Fork (copy) exercise. This operation creates new exercise with all internal values
         copied but new owner. New owner is the author of the request.
+
+        If fork is successful updated instance of forked exercise is send in response payload.
+
+        If fork is unsuccessful dict with errors is send in response payload.
         """
         exercise = self.get_object(exercise_id)
 
         # Detect name collision
         if Exercise.objects.filter(owner=request.user, name=exercise.name).count():
-            return Response(status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"non_field_errors": "You already own an exercise with this name"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         many_to_many_fieldnames = [
             field.name
@@ -110,7 +117,8 @@ class ExerciseDetail(APIView):
         exercise.forks_count += 1
         exercise.save()
 
-        return Response(status=status.HTTP_201_CREATED)
+        serializer = ExerciseSerializer(exercise, context={"user_id": request.user.pk})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, exercise_id, format=None):
         """Delete specific exercise. This can be done only if the user requesting delete is an
