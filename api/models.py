@@ -71,9 +71,9 @@ class Exercise(models.Model):
     def __str__(self):
         return f'Exercise(name={self.name}, kind={self.kind}, owner={self.owner})'
 
-    def can_be_forked(self, userId):
-        """Determine if user with userId already have any exercise with this exercise name. In such
+    def can_be_forked(self, user_pk):
+        """Determine if user with user_pk already have any exercise with this exercise name. In such
         case exercise cannot be forked."""
-        if Exercise.objects.filter(name=self.name, owner=userId):
+        if Exercise.objects.filter(name=self.name, owner=user_pk):
             return False
         return True
