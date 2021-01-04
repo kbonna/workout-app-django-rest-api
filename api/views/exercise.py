@@ -1,16 +1,14 @@
-from django.http import Http404
+from api.models import Exercise
+from api.serializers.exercise import ExerciseSerializer
 from django.db.models.fields.related import ManyToManyField
+from django.http import Http404
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.models import Exercise
-from api.serializers.exercise import ExerciseSerializer
-
 
 class ExerciseList(APIView):
 
-    # permission_classes = (permissions.AllowAny,)
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, format=None):
@@ -49,7 +47,6 @@ class ExerciseList(APIView):
 
 class ExerciseDetail(APIView):
 
-    # permission_classes = (permissions.AllowAny,)
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_object(self, pk):

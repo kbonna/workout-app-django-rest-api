@@ -4,7 +4,7 @@ import shutil
 import string
 
 import django
-from api.models import Exercise, Muscle, Tag, YoutubeLink
+from api.models import Exercise, Muscle, Tag, YoutubeLink, Routine
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from lorem_text import lorem
@@ -176,6 +176,40 @@ class Command(BaseCommand):
             kind="rew",
             owner=user,
         ).save()
+
+        # Set legs tag for lower body exercises
+        leg_tag = Tag.objects.get(name="legs")
+        for exercise_name in (
+            "bulgarian split squat",
+            "romanian single leg deadlift",
+            "pistol squat",
+            "lunges",
+            "box jumps",
+        ):
+            ex = Exercise.objects.get(name=exercise_name, owner=user)
+            ex.tags.add(leg_tag)
+
+        # Create routines for user with pk: 2
+        r = Routine.objects.create(
+            name="Leg workout A",
+            kind="sta",
+            instructions="This is the first leg workout.",
+            owner=user,
+        )
+        leg_exercises = Exercise.objects.filter(tags=leg_tag)
+        r.exercises.set(leg_exercises, through_defaults={"sets": 3})
+
+        r = Routine.objects.create(
+            name="Leg workout B",
+            kind="cir",
+            owner=user,
+        )
+        leg_exercises = Exercise.objects.filter(
+            name__in=("bridge", "hip thrust", "step ups", "jogging")
+        )
+        instructions = [lorem.words(n) for n in (5, 10, 20, 40)]
+        for exercise, instruction in zip(leg_exercises, instructions):
+            r.exercises.add(exercise, through_defaults={"sets": 4, "instructions": instruction})
 
         # Create exercises for user with pk: 3
         user = User.objects.get(pk=3)
