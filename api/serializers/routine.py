@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
-from ..models import Routine  # RoutineUnit, Exercise
+from ..models import Routine, RoutineUnit  # , Exercise
 from api.serializers.routine_unit import RoutineUnitSerializer
 
 
@@ -61,4 +61,16 @@ class RoutineSerializer(serializers.ModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
-        print(f"updating \ninstance={instance}\nvalidated_data={validated_data}")
+        instance.name = validated_data.get("name")
+        instance.kind = validated_data.get("kind")
+        instance.instructions = validated_data.get("instructions")
+
+        # Clear and setup again many to many relations
+        instance.exercises.clear()
+        for routine_unit in validated_data["routine_units"]:
+            exercise = routine_unit.pop("exercise")
+            instance.exercises.add(exercise, through_defaults=routine_unit)
+
+        instance.save()
+
+        return instance

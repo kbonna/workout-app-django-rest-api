@@ -86,3 +86,18 @@ class RoutineDetail(APIView):
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response(status=status.HTTP_403_FORBIDDEN)
+
+    def post(self, request, routine_id, format=None):
+        """Fork (copy) routine. This operation creates new routine with all internal values
+        copied but new owner. New owner is the author of the request.
+
+        Routine many-to-many relation with exercises works as follows: if user making fork request
+        owns an exercise contained in routine (exercise name must match) his version will be used,
+        otherwise according exercise will be automatically forked along.
+
+        If fork is successful updated instance of forked exercise is send in response payload.
+
+        If fork is unsuccessful dict with errors is send in response payload.
+        """
+        # TODO: implement this
+        pass

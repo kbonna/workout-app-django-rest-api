@@ -295,7 +295,7 @@ class ExerciseTest(APITestCase):
         self.assertListEqual(muscles, json_data["muscles"])
         self.assertListEqual(tutorials, json_data["tutorials"])
 
-    def test_edit_exercise_fail(self):
+    def test_edit_exercise_not_owned_by_you(self):
         """Try to edit exercise not owned by you."""
         json_data = {
             "name": "exercise 1 edited",
@@ -318,7 +318,7 @@ class ExerciseTest(APITestCase):
         exercise_stringified_after = str(model_to_dict(exercise_to_edit))
         self.assertEquals(exercise_stringified_before, exercise_stringified_after)
 
-    def test_edit_exercise_errors(self):
+    def test_edit_exercise_incorrect_data(self):
         """Try to edit exercise with invalid data and expect validation errors."""
         json_data = {
             "name": "",

@@ -1,11 +1,10 @@
-from unittest import skip
-
 from django.contrib.auth.models import User
+from django.forms.models import model_to_dict
 from django.urls import reverse
 from rest_framework import status
+from rest_framework.exceptions import ErrorDetail
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.exceptions import ErrorDetail
 
 from ..models import Exercise, Routine
 
@@ -80,11 +79,11 @@ class RoutineTest(APITestCase):
         self.owner_exercises = [
             Exercise.objects.create(name=f"Owner exercise {i}", kind="rep", owner=self.owner)
             for i in range(1, 6)
-        ]
+        ] + [Exercise.objects.create(name="Same name exercise", kind="rep", owner=self.owner)]
         self.other_user_exercises = [
             Exercise.objects.create(name=f"Other exercise {i}", kind="rew", owner=self.other_user)
             for i in range(1, 6)
-        ]
+        ] + [Exercise.objects.create(name="Same name exercise", kind="rew", owner=self.other_user)]
 
         # Routines
         self.owner_routines = [
@@ -98,13 +97,17 @@ class RoutineTest(APITestCase):
         self.other_user_routines = [
             Routine.objects.create(name="Other routine 1", kind="cir", owner=self.other_user),
             Routine.objects.create(name="Other routine 2", kind="cir", owner=self.other_user),
-            Routine.objects.create(name="Same name routine", kind="sta", owner=self.other_user),
+            Routine.objects.create(name="Same name routine", kind="cir", owner=self.other_user),
+            Routine.objects.create(name="Routine to fork", kind="cir", owner=self.other_user),
         ]
         self.other_user_routines[0].exercises.set(
             self.other_user_exercises[:2], through_defaults={"sets": 3}
         )
         self.other_user_routines[1].exercises.set(
             self.other_user_exercises[2:], through_defaults={"sets": 4}
+        )
+        self.other_user_routines[-1].exercises.set(
+            self.other_user_exercises, through_defaults={"sets": 10, "instructions": "fork me"}
         )
 
     def test_get_my_routines(self):
@@ -136,7 +139,8 @@ class RoutineTest(APITestCase):
         # Ensure other user routines that have same name as one of your routines cannot be forked
         self.assertTrue(response.data[0]["can_be_forked"])
         self.assertTrue(response.data[1]["can_be_forked"])
-        self.assertFalse(response.data[2]["can_be_forked"])
+        self.assertFalse(response.data[2]["can_be_forked"])  # name collision
+        self.assertTrue(response.data[3]["can_be_forked"])
 
     def test_get_routine_detail(self):
         """Get detail of single routine."""
@@ -363,9 +367,9 @@ class RoutineTest(APITestCase):
             "kind": "cir",
             "instructions": "edited instructions",
             "exercises": [
-                {"exercise": owner_exercises_pk[2], "sets": 4, "instructions": "edited 1"},
-                {"exercise": owner_exercises_pk[3], "sets": 5, "instructions": ""},
-                {"exercise": owner_exercises_pk[4], "sets": 6, "instructions": ""},
+                {"exercise": owner_exercises_pk[0], "sets": 3, "instructions": ""},
+                {"exercise": owner_exercises_pk[3], "sets": 6, "instructions": "edited 3"},
+                {"exercise": owner_exercises_pk[4], "sets": 6, "instructions": "edited 4"},
             ],
         }
 
@@ -373,4 +377,101 @@ class RoutineTest(APITestCase):
 
         url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"routine_id": routine_to_edit.pk})
         response = self.client.put(url, json_data, format="json")
-        print(response)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        routine_to_edit.refresh_from_db()
+        self.assertEqual(routine_to_edit.name, json_data["name"])
+        self.assertEqual(routine_to_edit.kind, json_data["kind"])
+        self.assertEqual(routine_to_edit.instructions, json_data["instructions"])
+        self.assertEqual(routine_to_edit.owner, self.owner)
+
+        # Ensure new routine units contain correct data (unused exercises should be removed)
+        self.assertEqual(routine_to_edit.exercises.count(), 3)
+
+        self.assertListEqual(
+            [
+                (ru.exercise.pk, ru.sets, ru.instructions)
+                for ru in routine_to_edit.routine_units.all()
+            ],
+            [
+                (ru_dict["exercise"], ru_dict["sets"], ru_dict["instructions"])
+                for ru_dict in json_data["exercises"]
+            ],
+        )
+
+    def test_edit_routine_not_owned_by_you(self):
+        """Try to edid routine of other user. That should not be possible."""
+        json_data = {
+            "name": "Other routine 1 edited",
+            "kind": "cir",
+            "instructions": "",
+        }
+
+        routine_to_edit = Routine.objects.get(owner=self.other_user.pk, name="Other routine 1")
+        routine_stringified_before = str(model_to_dict(routine_to_edit))
+
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"routine_id": routine_to_edit.pk})
+        response = self.client.put(url, json_data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        routine_to_edit.refresh_from_db()
+        routine_stringified_after = str(model_to_dict(routine_to_edit))
+        self.assertEquals(routine_stringified_before, routine_stringified_after)
+
+    def test_edit_routine_incorrect_data(self):
+        """Try to edit routine with incorrect data and expect errors."""
+        json_data = {
+            "name": "",
+            "kind": "xxx",
+            "exercises": [{}],
+        }
+
+        routine_to_edit = Routine.objects.get(owner=self.owner.pk, name="Owner routine 1")
+
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"routine_id": routine_to_edit.pk})
+        response = self.client.put(url, json_data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data,
+            {
+                "name": [ErrorDetail(string="This field may not be blank.", code="blank")],
+                "kind": [ErrorDetail(string='"xxx" is not a valid choice.', code="invalid_choice")],
+                "exercises": [
+                    {
+                        "exercise": [
+                            ErrorDetail(string="This field is required.", code="required")
+                        ],
+                        "sets": [ErrorDetail(string="This field is required.", code="required")],
+                    }
+                ],
+            },
+        )
+
+    def test_edit_routine_name_collision(self):
+        """Try to edit routine with valid data but with name of routine you already own. This
+        should be impossible due to owner and routine name should be unique together."""
+        json_data = {
+            "name": "Owner routine 2",
+            "kind": "sta",
+            "exercises": [],
+        }
+
+        routine_to_edit = Routine.objects.get(owner=self.owner.pk, name="Owner routine 1")
+
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"routine_id": routine_to_edit.pk})
+        response = self.client.put(url, json_data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {"non_field_errors": ["You already own this routine."]})
+
+    def test_fork_routine(self):
+        """Fork other user's routine when this is permitted (no name collision)."""
+        routine_to_fork = Routine.objects.get(owner=self.other_user.pk, name="Routine to fork")
+
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"routine_id": routine_to_fork.pk})
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
