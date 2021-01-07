@@ -1,3 +1,6 @@
+from api.serializers.exercise import ExerciseSerializer
+from api.serializers.routine import RoutineSerializer
+from api.serializers.routine_unit import RoutineUnitSerializer
 from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from django.urls import reverse
@@ -79,11 +82,25 @@ class RoutineTest(APITestCase):
         self.owner_exercises = [
             Exercise.objects.create(name=f"Owner exercise {i}", kind="rep", owner=self.owner)
             for i in range(1, 6)
-        ] + [Exercise.objects.create(name="Same name exercise", kind="rep", owner=self.owner)]
+        ] + [
+            Exercise.objects.create(
+                name="Same name exercise",
+                kind="rep",
+                owner=self.owner,
+                instructions="owner instructions",
+            )
+        ]
         self.other_user_exercises = [
             Exercise.objects.create(name=f"Other exercise {i}", kind="rew", owner=self.other_user)
             for i in range(1, 6)
-        ] + [Exercise.objects.create(name="Same name exercise", kind="rew", owner=self.other_user)]
+        ] + [
+            Exercise.objects.create(
+                name="Same name exercise",
+                kind="rew",
+                owner=self.other_user,
+                instructions="other user instructions",
+            )
+        ]
 
         # Routines
         self.owner_routines = [
@@ -98,7 +115,13 @@ class RoutineTest(APITestCase):
             Routine.objects.create(name="Other routine 1", kind="cir", owner=self.other_user),
             Routine.objects.create(name="Other routine 2", kind="cir", owner=self.other_user),
             Routine.objects.create(name="Same name routine", kind="cir", owner=self.other_user),
-            Routine.objects.create(name="Routine to fork", kind="cir", owner=self.other_user),
+            Routine.objects.create(
+                name="Routine to fork",
+                kind="cir",
+                owner=self.other_user,
+                instructions="routine fork me",
+                forks_count=10,
+            ),
         ]
         self.other_user_routines[0].exercises.set(
             self.other_user_exercises[:2], through_defaults={"sets": 3}
@@ -471,7 +494,72 @@ class RoutineTest(APITestCase):
         """Fork other user's routine when this is permitted (no name collision)."""
         routine_to_fork = Routine.objects.get(owner=self.other_user.pk, name="Routine to fork")
 
+        # Grab exercise that should be a part of new routine but should not be recreated
+        owner_exercise = Exercise.objects.get(owner=self.owner, name="Same name exercise")
+        owner_exercise_data_before = ExerciseSerializer(owner_exercise).data
+
         url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"routine_id": routine_to_fork.pk})
         response = self.client.post(url)
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        routine_to_fork.refresh_from_db()
+        routine_forked = Routine.objects.get(owner=self.owner, name=routine_to_fork.name)
+
+        # Test forking logic
+        self.assertEqual(routine_forked.forks_count, 0, msg="forked routine should have 0 forks")
+        self.assertEqual(
+            routine_to_fork.forks_count, 11, msg="original routine should have new fork"
+        )
+
+        self.assertEqual(routine_forked.kind, routine_to_fork.kind)
+        self.assertEqual(routine_forked.instructions, routine_to_fork.instructions)
+
+        serializer = RoutineUnitSerializer(routine_forked.routine_units.all(), many=True)
+
+        exercise_names = [
+            "Other exercise 1",
+            "Other exercise 2",
+            "Other exercise 3",
+            "Other exercise 4",
+            "Other exercise 5",
+            "Same name exercise",
+        ]
+        for exercise_name, routine_unit_dict in zip(exercise_names, serializer.data):
+            self.assertEqual(routine_unit_dict["exercise_name"], exercise_name)
+            self.assertEqual(routine_unit_dict["sets"], 10)
+            self.assertEqual(routine_unit_dict["instructions"], "fork me")
+
+        # Ensure forked rouine contains original owner exercise
+        self.assertEqual(serializer.data[-1]["exercise"], owner_exercise_data_before["pk"])
+
+        # Ensure owner "Same name exercise" exercise was not modified
+        owner_exercise.refresh_from_db()
+        owner_exercise_data_after = ExerciseSerializer(owner_exercise).data
+        self.assertEqual(owner_exercise_data_before, owner_exercise_data_after)
+
+    def test_fork_routine_name_collision(self):
+        """Try to fork other user's routine when you already owns a routine with this name."""
+        routine_to_fork = Routine.objects.get(owner=self.other_user.pk, name="Same name routine")
+        owner_routine = Routine.objects.get(owner=self.owner.pk, name="Same name routine")
+
+        owner_routine_data_before = RoutineSerializer(owner_routine).data
+
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"routine_id": routine_to_fork.pk})
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Owner routine should not be changed
+        owner_routine.refresh_from_db()
+        owner_routine_data_after = RoutineSerializer(owner_routine).data
+        self.assertEqual(owner_routine_data_before, owner_routine_data_after)
+
+    def test_fork_routine_you_own(self):
+        """Try to fork your own routine."""
+        routine_to_fork = Routine.objects.get(owner=self.owner.pk, name="Owner routine 1")
+
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"routine_id": routine_to_fork.pk})
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

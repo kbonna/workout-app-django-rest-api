@@ -1,5 +1,6 @@
-from api.models import Routine
+from api.models import Routine, Exercise
 from api.serializers.routine import RoutineSerializer
+from api.serializers.routine_unit import RoutineUnitSerializer
 from django.http import Http404
 from rest_framework import permissions, status
 from rest_framework.response import Response
@@ -99,5 +100,47 @@ class RoutineDetail(APIView):
 
         If fork is unsuccessful dict with errors is send in response payload.
         """
-        # TODO: implement this
-        pass
+        routine = self.get_object(routine_id)
+
+        # Detect name collision
+        if Routine.objects.filter(owner=request.user, name=routine.name).count():
+            return Response(
+                {"non_field_errors": "You already own routine with this name."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Grab all associated exercises
+        routine_units = routine.routine_units.all()
+        serializer = RoutineUnitSerializer(routine_units, many=True)
+
+        routine.pk = None
+        routine.owner = request.user
+        routine.forks_count = 0
+        routine.save()  # pk was set to None, so new db instance will be created
+
+        for routine_unit_dict in serializer.data:
+            try:
+                # Scenario 1: user making fork already owns an exercise
+                exercise = Exercise.objects.get(
+                    name=routine_unit_dict["exercise_name"], owner=request.user
+                )
+            except Exercise.DoesNotExist:
+                # Scenario 2: exercise is forked along routine
+                exercise = Exercise.objects.get(pk=routine_unit_dict["exercise"]).fork(request.user)
+
+            # Add new routine unit
+            routine.exercises.add(
+                exercise,
+                through_defaults={
+                    "sets": routine_unit_dict["sets"],
+                    "instructions": routine_unit_dict["instructions"],
+                },
+            )
+
+        # Increase routine forks count
+        routine = self.get_object(routine_id)
+        routine.forks_count += 1
+        routine.save()
+
+        serializer = RoutineSerializer(routine, context={"user_id": request.user.pk})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

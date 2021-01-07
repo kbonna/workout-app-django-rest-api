@@ -4,7 +4,6 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
-
 from ..models import Exercise, Muscle, Tag, YoutubeLink
 
 
@@ -415,7 +414,7 @@ class ExerciseTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(len(Exercise.objects.all()), n_exercises_before)
 
-    def test_fork_exercise_fail(self):
+    def test_fork_exercise_you_own(self):
         """Try to fork your own exercise"""
         n_exercises_before = len(Exercise.objects.all())
         exercise_to_fork = Exercise.objects.get(owner=self.owner.pk, name="exercise 1")

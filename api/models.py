@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models.fields.related import ManyToManyField
 
 
 class Tag(models.Model):
@@ -80,6 +81,30 @@ class Exercise(models.Model):
         if Exercise.objects.filter(name=self.name, owner=user_pk):
             return False
         return True
+
+    def fork(self, new_owner_pk):
+        """Copy exercise to another user.
+
+        Method assumes that this operation can be done, i.e. there is no name collision meaning that
+        new_owner don't have exercise of this name yet. This method also don't automatically
+        increase fork count of forked exercise.
+        """
+        many_to_many_fieldnames = [
+            field.name for field in self._meta.get_fields() if isinstance(field, ManyToManyField)
+        ]
+        many_to_many_objects = {
+            field: getattr(self, field).all() for field in many_to_many_fieldnames
+        }
+
+        self.pk = None
+        self.owner = new_owner_pk
+        self.forks_count = 0
+        self.save()  # pk was set to None, so new db instance will be created
+
+        for field, queryset in many_to_many_objects.items():
+            getattr(self, field).set(queryset)
+
+        return self
 
 
 class Routine(models.Model):

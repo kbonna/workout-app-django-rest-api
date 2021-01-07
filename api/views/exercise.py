@@ -92,24 +92,10 @@ class ExerciseDetail(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        many_to_many_fieldnames = [
-            field.name
-            for field in exercise._meta.get_fields()
-            if isinstance(field, ManyToManyField)
-        ]
-        many_to_many_objects = {
-            field: getattr(exercise, field).all() for field in many_to_many_fieldnames
-        }
+        # Create a copy
+        exercise.fork(request.user)
 
-        exercise.pk = None
-        exercise.owner = request.user
-        exercise.forks_count = 0
-        exercise.save()  # pk was set to None, so new db instance will be created
-
-        for field, queryset in many_to_many_objects.items():
-            getattr(exercise, field).set(queryset)
-
-        # increase forks count
+        # Increase forks count
         exercise = self.get_object(exercise_id)
         exercise.forks_count += 1
         exercise.save()
