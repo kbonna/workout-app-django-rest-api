@@ -8,8 +8,6 @@ from api.serializers.youtube_link import YoutubeLinkSerializer
 
 
 class ExerciseSerializer(serializers.ModelSerializer):
-    """..."""
-
     tags = TagSerializer(many=True)
     tutorials = YoutubeLinkSerializer(many=True)
     muscles = MuscleSerializer(many=True)

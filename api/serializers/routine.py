@@ -1,13 +1,11 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
-from ..models import Routine, RoutineUnit  # , Exercise
+from ..models import Routine
 from api.serializers.routine_unit import RoutineUnitSerializer
 
 
 class RoutineSerializer(serializers.ModelSerializer):
-    """..."""
-
     exercises = RoutineUnitSerializer(source="routine_units", many=True, required=False)
     owner_username = serializers.CharField(source="owner.username", read_only=True)
     kind_display = serializers.CharField(source="get_kind_display", read_only=True)
