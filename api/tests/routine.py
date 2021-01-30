@@ -25,15 +25,17 @@ class RoutineTest(APITestCase):
         "owner_username",
         "instructions",
         "can_be_forked",
+        "can_be_modified",
         "forks_count",
         "exercises",
+        "muscles_count",
     ]
 
     def authorize(self, user_obj):
         refresh = RefreshToken.for_user(user_obj)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
 
-    def assertCorrectRoutine(self, routine_dict, routine_obj, user_request):
+    def assertCorrectRoutine(self, routine_dict, routine_obj, user_request_pk):
         """Custom assertion for this APITestCase checking whether routine dict retrieved from API
         response match underlying database entry.
 
@@ -42,8 +44,8 @@ class RoutineTest(APITestCase):
                 Deserialized API response representing single routine.
             routine_obj (api.models.Exercise):
                 Routine model instance.
-            user_request (User):
-                User model instance corresponding to the user making request.
+            user_request_pk (int):
+                User pk corresponding to the user making request.
         """
         self.assertEqual(set(routine_dict.keys()), set(self.ROUTINE_SERIALIZER_FIELDS))
 
@@ -56,7 +58,11 @@ class RoutineTest(APITestCase):
         self.assertEqual(routine_dict["kind_display"], routine_obj.get_kind_display())
         self.assertEqual(routine_dict["owner"], routine_obj.owner.pk)
         self.assertEqual(routine_dict["owner_username"], routine_obj.owner.username)
-        self.assertEqual(routine_dict["can_be_forked"], routine_obj.can_be_forked(user_request))
+        self.assertEqual(routine_dict["can_be_forked"], routine_obj.can_be_forked(user_request_pk))
+        self.assertEqual(
+            routine_dict["can_be_modified"], routine_obj.can_be_modified(user_request_pk)
+        )
+        self.assertEqual(routine_dict["muscles_count"], routine_obj.muscles_count())
 
         # Correct form of deserialized list of routine units
         exercises = [
@@ -142,7 +148,7 @@ class RoutineTest(APITestCase):
         self.assertEqual(len(response.data), len(self.owner_routines))
 
         for routine_dict, routine_obj in zip(response.data, self.owner_routines):
-            self.assertCorrectRoutine(routine_dict, routine_obj, self.owner)
+            self.assertCorrectRoutine(routine_dict, routine_obj, self.owner.pk)
 
         # Ensure your own exercises cannot be forked
         for routine_dict in response.data:
@@ -156,8 +162,8 @@ class RoutineTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), len(self.other_user_routines))
 
-        for routine_dicv, routine_obj in zip(response.data, self.other_user_routines):
-            self.assertCorrectRoutine(routine_dicv, routine_obj, self.owner)
+        for routine_dict, routine_obj in zip(response.data, self.other_user_routines):
+            self.assertCorrectRoutine(routine_dict, routine_obj, self.owner.pk)
 
         # Ensure other user routines that have same name as one of your routines cannot be forked
         self.assertTrue(response.data[0]["can_be_forked"])
@@ -174,7 +180,7 @@ class RoutineTest(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(isinstance(response.data, dict))
-        self.assertCorrectRoutine(response.data, routine, self.owner)
+        self.assertCorrectRoutine(response.data, routine, self.owner.pk)
 
     def test_delete_routine(self):
         """Delete routine when you are an routine owner."""
@@ -260,7 +266,8 @@ class RoutineTest(APITestCase):
             "owner": 1,
             "owner_username": "owner",
             "instructions": "",
-            "can_be_forked": None,
+            "can_be_forked": False,
+            "can_be_modified": True,
             "forks_count": 0,
             "exercises": [],
         }

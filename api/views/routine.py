@@ -14,7 +14,7 @@ class RoutineList(APIView):
     def post(self, request, format=None):
         """Adds new routine for specic user."""
         serializer = RoutineSerializer(
-            data={**request.data, "owner": request.user.pk}, context={"owner": request.user.pk}
+            data={**request.data, "owner": request.user.pk}, context={"user_pk": request.user.pk}
         )
         if serializer.is_valid():
             serializer.save()
@@ -31,18 +31,18 @@ class RoutineList(APIView):
                 Parameter for discover tab. If True, all routines not owned by the user will be
                 returned.
         """
-        user_id = request.GET.get("user", None)
+        user_pk_filter = request.GET.get("user", None)
         discover = request.GET.get("discover", False)
 
-        if user_id:
+        if user_pk_filter:
             if discover:
-                queryset = Routine.objects.exclude(owner=user_id)
+                queryset = Routine.objects.exclude(owner=user_pk_filter)
             else:
-                queryset = Routine.objects.filter(owner=user_id)
+                queryset = Routine.objects.filter(owner=user_pk_filter)
         else:
             queryset = Routine.objects.all()
 
-        serializer = RoutineSerializer(queryset, context={"user_id": user_id}, many=True)
+        serializer = RoutineSerializer(queryset, context={"user_pk": request.user.pk}, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -60,7 +60,7 @@ class RoutineDetail(APIView):
     def get(self, request, routine_id, format=None):
         """Get information about specific routine."""
         routine = self.get_object(routine_id)
-        serializer = RoutineSerializer(routine, context={"user_id": request.user.pk})
+        serializer = RoutineSerializer(routine, context={"user_pk": request.user.pk})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def delete(self, request, routine_id, format=None):
@@ -80,7 +80,7 @@ class RoutineDetail(APIView):
             serializer = RoutineSerializer(
                 routine,
                 data={**request.data, "owner": request.user.pk},
-                context={"owner": request.user.pk},
+                context={"user_pk": request.user.pk},
             )
             if serializer.is_valid():
                 serializer.save()
@@ -142,5 +142,5 @@ class RoutineDetail(APIView):
         routine.forks_count += 1
         routine.save()
 
-        serializer = RoutineSerializer(routine, context={"user_id": request.user.pk})
+        serializer = RoutineSerializer(routine, context={"user_pk": request.user.pk})
         return Response(serializer.data, status=status.HTTP_201_CREATED)

@@ -15,7 +15,7 @@ class RoutineUnitSerializer(serializers.ModelSerializer):
         read_only_fields = ["routine"]
 
     def validate_exercise(self, exercise):
-        routine_owner_pk = self.context["owner"]
+        routine_owner_pk = self.context["user_pk"]
         if exercise.owner.pk != routine_owner_pk:
             raise ValidationError("This is not your exercise.")
         return exercise

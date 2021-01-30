@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.fields.related import ManyToManyField
+from collections import Counter
 
 
 class Tag(models.Model):
@@ -131,6 +132,21 @@ class Routine(models.Model):
         if Routine.objects.filter(name=self.name, owner=user_pk):
             return False
         return True
+
+    def can_be_modified(self, user_pk):
+        """Determine if user with user_pk is owner of the routine allowing him to modify or delete
+        this routine."""
+        return user_pk == self.owner.pk
+
+    def muscles_count(self):
+        """Create dictionary with all muscles targeted with specific routine. Each key will
+        correspond to specific muscle and value will be integer equal to number of exercise
+        targeting this muscle."""
+        muscles_list = [
+            muscle.name
+            for muscle in Muscle.objects.filter(exercise__routine_units__routine__pk=self.pk)
+        ]
+        return dict(Counter(muscles_list))
 
 
 class RoutineUnit(models.Model):

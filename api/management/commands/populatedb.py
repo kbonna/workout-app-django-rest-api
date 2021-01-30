@@ -3,16 +3,29 @@ import random
 import shutil
 import string
 
-import django
-from api.models import Exercise, Muscle, Tag, YoutubeLink, Routine
+from api.data.db_dummy_data import EXERCISES_USER_1
+from api.models import Exercise, Muscle, Routine, Tag, YoutubeLink
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from lorem_text import lorem
 
 random.seed(0)
-# May not be useful anymore
-# os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'wapp.settings')
-# django.setup()
+
+
+def create_exercise(
+    name, kind, owner, instructions="", forks_count=0, tags=[], tutorials=[], muscles=[]
+):
+    exercise = Exercise(
+        name=name, kind=kind, instructions=instructions, owner=owner, forks_count=forks_count
+    )
+    exercise.save()
+
+    if tags:
+        exercise.tags.set(Tag.objects.filter(name__in=tags))
+    if tutorials:
+        exercise.tutorials.set(YoutubeLink.objects.filter(pk__in=tutorials))
+    if muscles:
+        exercise.muscles.set(Muscle.objects.filter(name__in=muscles))
 
 
 class Command(BaseCommand):
@@ -77,117 +90,8 @@ class Command(BaseCommand):
 
         # Create exercises for user with pk: 2
         user = User.objects.get(pk=2)
-
-        ex = Exercise(
-            name="push ups",
-            kind="rep",
-            instructions="Remember about hollow body position.",
-            owner=user,
-        )
-        ex.save()
-        ex.tags.set([Tag.objects.get(name="easy"), Tag.objects.get(name="popular")])
-        ex.tutorials.set([YoutubeLink.objects.all()[10]])
-        ex.muscles.set([Muscle.objects.get(name="pec"), Muscle.objects.get(name="tri")])
-
-        ex = Exercise(
-            name="pull ups",
-            kind="rep",
-            instructions="Tense your core during movement.",
-            owner=user,
-        )
-        ex.save()
-        ex.tutorials.set([YoutubeLink.objects.all()[20]])
-        ex.muscles.set([Muscle.objects.get(name="tra")])
-
-        Exercise(
-            name="bulgarian split squat",
-            kind="rep",
-            instructions=lorem.words(10),
-            owner=user,
-        ).save()
-        Exercise(
-            name="romanian single leg deadlift",
-            kind="rep",
-            instructions=lorem.words(20),
-            owner=user,
-        ).save()
-        Exercise(
-            name="pistol squat",
-            kind="rep",
-            instructions=lorem.words(30),
-            owner=user,
-            forks_count=12,
-        ).save()
-        Exercise(
-            name="sumo walk",
-            kind="rew",
-            instructions=lorem.words(100),
-            owner=user,
-            forks_count=8,
-        ).save()
-        Exercise(
-            name="calf raises",
-            kind="rep",
-            owner=user,
-        ).save()
-        Exercise(
-            name="squat",
-            kind="rew",
-            owner=user,
-        ).save()
-        Exercise(
-            name="jogging",
-            kind="dis",
-            owner=user,
-            forks_count=2,
-        ).save()
-        Exercise(
-            name="lunges",
-            kind="rep",
-            owner=user,
-        ).save()
-        Exercise(
-            name="step ups",
-            kind="rep",
-            owner=user,
-        ).save()
-        Exercise(
-            name="box jumps",
-            kind="rep",
-            owner=user,
-        ).save()
-        Exercise(
-            name="bridge",
-            kind="tim",
-            owner=user,
-        ).save()
-        Exercise(
-            name="dance",
-            kind="tim",
-            owner=user,
-        ).save()
-        Exercise(
-            name="intervals run",
-            kind="tim",
-            owner=user,
-        ).save()
-        Exercise(
-            name="hip thrust",
-            kind="rew",
-            owner=user,
-        ).save()
-
-        # Set legs tag for lower body exercises
-        leg_tag = Tag.objects.get(name="legs")
-        for exercise_name in (
-            "bulgarian split squat",
-            "romanian single leg deadlift",
-            "pistol squat",
-            "lunges",
-            "box jumps",
-        ):
-            ex = Exercise.objects.get(name=exercise_name, owner=user)
-            ex.tags.add(leg_tag)
+        for exercise_dict in EXERCISES_USER_1:
+            create_exercise(**exercise_dict, owner=user)
 
         # Create routines for user with pk: 2
         r = Routine.objects.create(
@@ -196,11 +100,20 @@ class Command(BaseCommand):
             instructions="This is the first leg workout.",
             owner=user,
         )
-        leg_exercises = Exercise.objects.filter(tags=leg_tag)
+        leg_exercises = Exercise.objects.filter(
+            name__in=[
+                "bulgarian split squat",
+                "romanian single leg deadlift",
+                "pistol squat",
+                "lunges",
+                "box jumps",
+            ]
+        )
         r.exercises.set(leg_exercises, through_defaults={"sets": 3})
 
         r = Routine.objects.create(
             name="Leg workout B",
+            instructions="My favourite leg workout.",
             kind="cir",
             owner=user,
         )
@@ -210,6 +123,21 @@ class Command(BaseCommand):
         instructions = [lorem.words(n) for n in (5, 10, 20, 40)]
         for exercise, instruction in zip(leg_exercises, instructions):
             r.exercises.add(exercise, through_defaults={"sets": 4, "instructions": instruction})
+
+        Routine.objects.create(name="Push A", kind="sta", owner=user, forks_count=11)
+        Routine.objects.create(name="Push B", kind="sta", owner=user)
+        Routine.objects.create(name="Push C", kind="sta", owner=user)
+        Routine.objects.create(name="Push D", kind="sta", owner=user)
+        Routine.objects.create(name="Pull A", kind="sta", owner=user, forks_count=3)
+        Routine.objects.create(name="Pull B", kind="sta", owner=user, forks_count=2)
+        Routine.objects.create(name="Pull C", kind="sta", owner=user)
+        Routine.objects.create(name="Pull D", kind="sta", owner=user)
+        Routine.objects.create(name="FBW A", kind="sta", owner=user, forks_count=1)
+        Routine.objects.create(name="FBW B", kind="sta", owner=user)
+        Routine.objects.create(name="FBW C", kind="sta", owner=user)
+        Routine.objects.create(name="FBW D", kind="sta", owner=user)
+        for i in range(30):
+            Routine.objects.create(name=f"Routine {i}", kind="sta", owner=user)
 
         # Create exercises for user with pk: 3
         user = User.objects.get(pk=3)
@@ -234,3 +162,17 @@ class Command(BaseCommand):
         ex.save()
         ex.tutorials.set([YoutubeLink.objects.all()[60], YoutubeLink.objects.all()[61]])
         ex.muscles.set([Muscle.objects.get(name="abs")])
+
+        # Create routines for user with pk:
+        Routine.objects.create(name="Chest, triceps and shoulders", kind="sta", owner=user)
+        Routine.objects.create(name="Arms", kind="cir", owner=user)
+        Routine.objects.create(name="Upper body (bodyweight)", kind="sta", owner=user)
+        Routine.objects.create(name="Upper body (weights)", kind="sta", owner=user)
+        Routine.objects.create(name="Powerlifting", kind="sta", owner=user, forks_count=3)
+        Routine.objects.create(name="Begginers", kind="sta", owner=user, forks_count=2)
+        Routine.objects.create(name="Advanced abs", kind="sta", owner=user)
+        Routine.objects.create(name="Quads, hamstrings", kind="sta", owner=user)
+        Routine.objects.create(name="Endurance", kind="sta", owner=user, forks_count=1)
+        Routine.objects.create(name="Full body", kind="cir", owner=user)
+        Routine.objects.create(name="Strenght", kind="sta", owner=user)
+        Routine.objects.create(name="Hypertrophy", kind="sta", owner=user)
