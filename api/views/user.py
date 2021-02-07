@@ -1,12 +1,13 @@
-from api.serializers.user import UserSerializer
+from api.serializers.user import UserProfileSerializer, UserSerializer
 from django.contrib.auth.models import User
+from django.http import Http404
 from rest_framework import permissions, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 def current_user(request):
     """
     Determine the current user by their token, and return their data
@@ -40,3 +41,21 @@ class UserList(APIView):
         if serializer.is_valid():
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.data)
+
+
+class UserDetail(APIView):
+    """..."""
+
+    # ! Change later
+    permission_classes = (permissions.AllowAny,)
+
+    def get_object(self, pk):
+        try:
+            return User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            raise Http404
+
+    def get(self, request, user_pk, format=None):
+        user = self.get_object(user_pk)
+        serializer = UserProfileSerializer(user, context={"user_pk": request.user.pk})
+        return Response(serializer.data, status=status.HTTP_200_OK)

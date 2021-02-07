@@ -5,6 +5,18 @@ from django.db.models.fields.related import ManyToManyField
 from collections import Counter
 
 
+class Profile(models.Model):
+    """Additional user-related informations."""
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    city = models.CharField(blank=True, max_length=100)
+    country = models.CharField(blank=True, max_length=100)
+    profile_picture = models.FileField(upload_to="profile_pictures/", default="default.png")
+
+    def __str__(self):
+        return f"Profile(user={self.user})"
+
+
 class Tag(models.Model):
     """Tags used to label exercises. They are global and can be added by all users. They can only be
     removed if all exercises (and other related enities) with corresponding tags are removed."""

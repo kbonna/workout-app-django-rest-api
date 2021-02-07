@@ -17,3 +17,10 @@ class UserSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
         return instance
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("username", "first_name", "last_name", "email", "profile")
+        depth = 1
