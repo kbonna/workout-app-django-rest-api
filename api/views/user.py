@@ -1,10 +1,11 @@
-from api.serializers.user import UserProfileSerializer, UserSerializer
+from api.serializers.user import UserDetailSerializer, UserSerializer
 from django.contrib.auth.models import User
 from django.http import Http404
 from rest_framework import permissions, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from api.permissions import IsHimself
 
 
 @api_view(["GET"])
@@ -47,15 +48,25 @@ class UserDetail(APIView):
     """..."""
 
     # ! Change later
-    permission_classes = (permissions.AllowAny,)
+    permission_classes = (permissions.IsAuthenticated, IsHimself)
 
     def get_object(self, pk):
         try:
-            return User.objects.get(pk=pk)
+            user = User.objects.get(pk=pk)
+            self.check_object_permissions(request=self.request, obj=user)
+            return user
         except User.DoesNotExist:
             raise Http404
 
     def get(self, request, user_pk, format=None):
         user = self.get_object(user_pk)
-        serializer = UserProfileSerializer(user, context={"user_pk": request.user.pk})
+        serializer = UserDetailSerializer(user, context={"user_pk": request.user.pk})
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, user_pk, format=None):
+        user = self.get_object(user_pk)
+        serializer = UserDetailSerializer(user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

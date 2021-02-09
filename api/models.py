@@ -5,16 +5,16 @@ from django.db.models.fields.related import ManyToManyField
 from collections import Counter
 
 
-class Profile(models.Model):
+class UserProfile(models.Model):
     """Additional user-related informations."""
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     city = models.CharField(blank=True, max_length=100)
     country = models.CharField(blank=True, max_length=100)
     profile_picture = models.FileField(upload_to="profile_pictures/", default="default.png")
 
     def __str__(self):
-        return f"Profile(user={self.user})"
+        return f"UserProfile(user={self.user})"
 
 
 class Tag(models.Model):

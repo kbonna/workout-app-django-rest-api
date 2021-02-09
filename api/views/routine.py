@@ -52,18 +52,18 @@ class RoutineDetail(APIView):
 
     permission_classes = (permissions.IsAuthenticated, IsOwnerOrReadOnly)
 
-    def get_object(self, pk, request, validate_permissions=True):
+    def get_object(self, pk, validate_permissions=True):
         try:
             instance = Routine.objects.get(pk=pk)
             if validate_permissions:
-                self.check_object_permissions(request=request, obj=instance)
+                self.check_object_permissions(request=self.request, obj=instance)
             return instance
         except Routine.DoesNotExist:
             raise Http404
 
     def get(self, request, routine_id, format=None):
         """Get information about specific routine."""
-        routine = self.get_object(routine_id, request)
+        routine = self.get_object(routine_id)
         serializer = RoutineSerializer(routine, context={"user_pk": request.user.pk})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -71,13 +71,13 @@ class RoutineDetail(APIView):
         """Delete specific routine. This can be done only if the user requesting delete is an
         routine owner.
         """
-        routine = self.get_object(routine_id, request)
+        routine = self.get_object(routine_id)
         routine.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def put(self, request, routine_id, format=None):
         """Edit routine data. This can be done only if the user requesting edit is routine owner."""
-        routine = self.get_object(routine_id, request)
+        routine = self.get_object(routine_id)
         serializer = RoutineSerializer(
             routine,
             data={**request.data, "owner": request.user.pk},
@@ -100,7 +100,7 @@ class RoutineDetail(APIView):
 
         If fork is unsuccessful dict with errors is send in response payload.
         """
-        routine = self.get_object(routine_id, request, validate_permissions=False)
+        routine = self.get_object(routine_id, validate_permissions=False)
 
         # Detect name collision
         if Routine.objects.filter(owner=request.user, name=routine.name).count():
@@ -138,7 +138,7 @@ class RoutineDetail(APIView):
             )
 
         # Increase routine forks count
-        routine = self.get_object(routine_id, request, validate_permissions=False)
+        routine = self.get_object(routine_id, validate_permissions=False)
         routine.forks_count += 1
         routine.save()
 
