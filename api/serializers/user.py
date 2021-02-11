@@ -27,19 +27,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ("profile_picture",)
 
 
-class UserProfilePictureSerializer(serializers.ModelSerializer):
-    profile_picture = serializers.ImageField(max_length=100, allow_empty_file=False, required=True)
-
-    class Meta:
-        model = UserProfile
-        fields = ("profile_picture",)
-
-    def update(self, instance, validated_data):
-        instance.profile_picture = validated_data.get("profile_picture")
-        instance.save()
-        return instance
-
-
 class UserDetailSerializer(serializers.ModelSerializer):
 
     profile = UserProfileSerializer(required=True)
@@ -62,3 +49,38 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+
+
+class UserProfilePictureSerializer(serializers.ModelSerializer):
+    profile_picture = serializers.ImageField(max_length=100, allow_empty_file=False, required=True)
+
+    class Meta:
+        model = UserProfile
+        fields = ("profile_picture",)
+
+    def update(self, instance, validated_data):
+        instance.profile_picture = validated_data.get("profile_picture")
+        instance.save()
+        return instance
+
+
+class UserPasswordSerializer(serializers.ModelSerializer):
+
+    password = serializers.CharField(write_only=True, min_length=4)
+
+    class Meta:
+        model = User
+        fields = ("password",)
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password")
+        instance.set_password(password)
+        instance.save()
+        return instance
+
+
+class UserEmailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("email",)
+        extra_kwargs = {"email": {"required": True}}

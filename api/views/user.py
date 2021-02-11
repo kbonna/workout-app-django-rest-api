@@ -1,11 +1,20 @@
-from api.serializers.user import UserDetailSerializer, UserSerializer
 from django.contrib.auth.models import User
 from django.http import Http404
 from rest_framework import permissions, status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework import generics
 from api.permissions import IsHimself
+from rest_framework.parsers import MultiPartParser
+from api.models import UserProfile
+from api.serializers.user import (
+    UserSerializer,
+    UserDetailSerializer,
+    UserProfilePictureSerializer,
+    UserPasswordSerializer,
+    UserEmailSerializer,
+)
 
 
 @api_view(["GET"])
@@ -15,6 +24,50 @@ def current_user(request):
     """
     serializer = UserSerializer(request.user)
     return Response(serializer.data)
+
+
+@parser_classes((MultiPartParser,))
+@permission_classes((permissions.IsAuthenticated,))
+@api_view(["PUT"])
+def profile_picture_upload(request, user_pk):
+    """
+    Allow user to upload their own profile picture.
+    """
+    # Custom permissions cannot be set on function-based views
+    if user_pk != request.user.pk:
+        return Response(status=status.HTTP_403_FORBIDDEN)
+
+    user_profile = UserProfile.objects.get(user=request.user)
+    serializer = UserProfilePictureSerializer(instance=user_profile, data=request.data)
+
+    if serializer.is_valid():
+        serializer.save()
+        return Response(status=status.HTTP_200_OK)
+    return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@permission_classes((permissions.IsAuthenticated,))
+@api_view(["POST"])
+def password_reset(request, user_pk):
+    """
+    Allow user to reset their password.
+    """
+    if user_pk != request.user.pk:
+        return Response(status=status.HTTP_403_FORBIDDEN)
+
+    serializer = UserPasswordSerializer(instance=request.user, data=request.data)
+
+    if serializer.is_valid():
+        serializer.save()
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+    return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserEmailUpdate(generics.UpdateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserEmailSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+    lookup_url_kwarg = "user_pk"
 
 
 class UserList(APIView):
