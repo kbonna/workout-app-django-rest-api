@@ -1,14 +1,15 @@
+import os
+import tempfile
+
 from django.conf import settings
+from django.contrib.auth.hashers import check_password
 from django.contrib.auth.models import User
+from django.test import override_settings
 from django.urls import reverse
 from PIL import Image
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.test import override_settings
-import tempfile
-import os
-from django.contrib.auth.hashers import check_password
 
 
 def create_image_file(suffix=".png"):
@@ -24,9 +25,9 @@ class UserTest(APITestCase):
 
     USER_LIST_URLPATTERN_NAME = "user-list"
     USER_DETAIL_URLPATTERN_NAME = "user-detail"
-    PROFILE_PICTURE_URLPATTERN_NAME = "profile-picture"
-    PASSWORD_RESET_URLPATTERN_NAME = "password-reset"
-    EMAIL_RESET_URLPATTERN_NAME = "email-reset"
+    PROFILE_PICTURE_URLPATTERN_NAME = "user-picture-reset"
+    PASSWORD_RESET_URLPATTERN_NAME = "user-password-reset"
+    EMAIL_RESET_URLPATTERN_NAME = "user-email-reset"
 
     def authorize(self, user_obj):
         refresh = RefreshToken.for_user(user_obj)
@@ -55,6 +56,7 @@ class UserTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_get_user_profile_data(self):
+        """User is able to get own profile data including email."""
         self.authorize(self.owner)
         url = reverse(self.USER_DETAIL_URLPATTERN_NAME, kwargs={"user_pk": self.owner.pk})
         response = self.client.get(url)
@@ -66,20 +68,33 @@ class UserTest(APITestCase):
         self.assertEqual(data["first_name"], "Test")
         self.assertEqual(data["last_name"], "Smith")
         self.assertEqual(data["email"], "owner@mail.com")
-        self.assertEqual(data["username"], "owner")
         self.assertNotIn("password", data)
 
         profile = data["profile"]
         self.assertEqual(profile["profile_picture"], settings.MEDIA_URL + "default.png")
 
-    def test_get_user_profile_data_unauthorized(self):
+    def test_get_user_profile_data_other_user(self):
+        """Any authenticated user is able to get data of other user but without email field."""
         self.authorize(self.owner)
         url = reverse(self.USER_DETAIL_URLPATTERN_NAME, kwargs={"user_pk": self.other_user.pk})
         response = self.client.get(url)
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        data = response.data
+        self.assertEqual(data["username"], "other_user")
+        self.assertEqual(data["first_name"], "")
+        self.assertEqual(data["last_name"], "")
+
+        # These fields should not be in the response
+        self.assertNotIn("password", data)
+        self.assertNotIn("email", data)
+
+        profile = data["profile"]
+        self.assertEqual(profile["profile_picture"], settings.MEDIA_URL + "default.png")
 
     def test_update_user_profile_data(self):
+        """User can update his own profile data."""
         self.authorize(self.owner)
         json_data = {
             "pk": self.owner.pk + 1,
@@ -105,6 +120,7 @@ class UserTest(APITestCase):
         self.assertEqual(self.owner.profile.city, "Warsaw")
 
     def test_update_user_profile_data_errors(self):
+        """Profile data should be validated."""
         self.authorize(self.owner)
 
         # prepare data to contain too long strings, profile picture should be image not str
@@ -142,6 +158,7 @@ class UserTest(APITestCase):
     # This way real /media/ folder would not be littered by test files
     @override_settings(MEDIA_ROOT=tempfile.TemporaryDirectory(prefix="mediatest").name)
     def test_update_profile_picture(self):
+        """User can update their profile picture."""
         self.authorize(self.owner)
 
         img_file = create_image_file()
@@ -158,6 +175,7 @@ class UserTest(APITestCase):
 
     @override_settings(MEDIA_ROOT=tempfile.TemporaryDirectory(prefix="mediatest").name)
     def test_update_profile_picture_of_other_user(self):
+        """User cannot update profile picture of other user."""
         self.authorize(self.owner)
 
         img_file = create_image_file()
@@ -198,7 +216,7 @@ class UserTest(APITestCase):
         self.authorize(self.owner)
 
         url = reverse(self.PASSWORD_RESET_URLPATTERN_NAME, kwargs={"user_pk": self.owner.pk})
-        response = self.client.post(url, {"password": "new_password"}, format="json")
+        response = self.client.put(url, {"password": "new_password"}, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -212,12 +230,12 @@ class UserTest(APITestCase):
         url = reverse(self.PASSWORD_RESET_URLPATTERN_NAME, kwargs={"user_pk": self.owner.pk})
 
         # Too short password
-        response = self.client.post(url, {"password": "123"}, format="json")
+        response = self.client.put(url, {"password": "123"}, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("password", response.data)
 
         # Incorrect field name
-        response = self.client.post(url, {"pass": "123"}, format="json")
+        response = self.client.put(url, {"pass": "123"}, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("password", response.data)
 
@@ -228,16 +246,16 @@ class UserTest(APITestCase):
         url = reverse(self.PASSWORD_RESET_URLPATTERN_NAME, kwargs={"user_pk": self.other_user.pk})
 
         # Too short password
-        response = self.client.post(url, {"password": "new_password"}, format="json")
+        response = self.client.put(url, {"password": "new_password"}, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_password_reset_wrong_http_methods(self):
-        """Password reset endpoint only accepts POST requests."""
+        """Password reset endpoint only accepts PUT requests."""
         self.authorize(self.owner)
 
         url = reverse(self.PASSWORD_RESET_URLPATTERN_NAME, kwargs={"user_pk": self.owner.pk})
 
-        for method in ("get", "put", "delete"):
+        for method in ("get", "post", "delete"):
             response = self.client.__getattribute__(method)(
                 url, {"password": "new_password"}, format="json"
             )
@@ -271,5 +289,22 @@ class UserTest(APITestCase):
         self.assertEqual(response.data["email"][0], "This field is required.")
 
     def test_email_reset_for_other_user(self):
-        # TODO: implement this
-        pass
+        """User cannot reset email of other user."""
+        self.authorize(self.owner)
+
+        url = reverse(self.EMAIL_RESET_URLPATTERN_NAME, kwargs={"user_pk": self.other_user.pk})
+
+        response = self.client.put(url, {"email": "new@email.com"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_email_reset_wrong_http_methods(self):
+        """Email reset endpoint only accepts PUT requests."""
+        self.authorize(self.owner)
+
+        url = reverse(self.EMAIL_RESET_URLPATTERN_NAME, kwargs={"user_pk": self.owner.pk})
+
+        for method in ("get", "post", "delete"):
+            response = self.client.__getattribute__(method)(
+                url, {"email": "new@email.com"}, format="json"
+            )
+            self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)

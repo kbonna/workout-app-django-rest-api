@@ -1,20 +1,20 @@
+from api.models import UserProfile
+from api.permissions import IsHisResource, IsUserOrReadOnly
+from api.serializers.user import (
+    BasicUserDetailSerializer,
+    FullUserDetailSerializer,
+    UserEmailSerializer,
+    UserPasswordSerializer,
+    UserProfilePictureSerializer,
+    UserSerializer,
+)
 from django.contrib.auth.models import User
 from django.http import Http404
-from rest_framework import permissions, status
-from rest_framework.decorators import api_view, permission_classes, parser_classes
+from rest_framework import generics, permissions, status
+from rest_framework.decorators import api_view
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import generics
-from api.permissions import IsHimself
-from rest_framework.parsers import MultiPartParser
-from api.models import UserProfile
-from api.serializers.user import (
-    UserSerializer,
-    UserDetailSerializer,
-    UserProfilePictureSerializer,
-    UserPasswordSerializer,
-    UserEmailSerializer,
-)
 
 
 @api_view(["GET"])
@@ -24,50 +24,6 @@ def current_user(request):
     """
     serializer = UserSerializer(request.user)
     return Response(serializer.data)
-
-
-@parser_classes((MultiPartParser,))
-@permission_classes((permissions.IsAuthenticated,))
-@api_view(["PUT"])
-def profile_picture_upload(request, user_pk):
-    """
-    Allow user to upload their own profile picture.
-    """
-    # Custom permissions cannot be set on function-based views
-    if user_pk != request.user.pk:
-        return Response(status=status.HTTP_403_FORBIDDEN)
-
-    user_profile = UserProfile.objects.get(user=request.user)
-    serializer = UserProfilePictureSerializer(instance=user_profile, data=request.data)
-
-    if serializer.is_valid():
-        serializer.save()
-        return Response(status=status.HTTP_200_OK)
-    return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@permission_classes((permissions.IsAuthenticated,))
-@api_view(["POST"])
-def password_reset(request, user_pk):
-    """
-    Allow user to reset their password.
-    """
-    if user_pk != request.user.pk:
-        return Response(status=status.HTTP_403_FORBIDDEN)
-
-    serializer = UserPasswordSerializer(instance=request.user, data=request.data)
-
-    if serializer.is_valid():
-        serializer.save()
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
-    return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class UserEmailUpdate(generics.UpdateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserEmailSerializer
-    permission_classes = (permissions.IsAuthenticated,)
-    lookup_url_kwarg = "user_pk"
 
 
 class UserList(APIView):
@@ -98,10 +54,13 @@ class UserList(APIView):
 
 
 class UserDetail(APIView):
-    """..."""
+    """Read and update user profile data.
 
-    # ! Change later
-    permission_classes = (permissions.IsAuthenticated, IsHimself)
+    GET is acessible for any authenticated user. Serializer class is different depending on if user
+    requests his own data. In this case email field is visible, otherwise it is hidden. PUT is
+    accessible only for users trying to change their own profile data."""
+
+    permission_classes = (permissions.IsAuthenticated, IsUserOrReadOnly)
 
     def get_object(self, pk):
         try:
@@ -113,13 +72,45 @@ class UserDetail(APIView):
 
     def get(self, request, user_pk, format=None):
         user = self.get_object(user_pk)
-        serializer = UserDetailSerializer(user, context={"user_pk": request.user.pk})
+
+        if request.user.pk == user_pk:
+            serializer = FullUserDetailSerializer(user)
+        else:
+            serializer = BasicUserDetailSerializer(user)
+
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, user_pk, format=None):
         user = self.get_object(user_pk)
-        serializer = UserDetailSerializer(user, data=request.data)
+        serializer = FullUserDetailSerializer(user, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserProfilePictureUpdate(generics.UpdateAPIView):
+    queryset = UserProfile
+    serializer_class = UserProfilePictureSerializer
+    permission_classes = (permissions.IsAuthenticated, IsHisResource)
+    parser_classes = (MultiPartParser,)
+    lookup_url_kwarg = "user_pk"
+
+    def get_object(self):
+        queryset = self.get_queryset()
+        obj = queryset.objects.get(user=self.kwargs["user_pk"])
+        return obj
+
+
+class UserPasswordUpdate(generics.UpdateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserPasswordSerializer
+    permission_classes = (permissions.IsAuthenticated, IsHisResource)
+    lookup_url_kwarg = "user_pk"
+
+
+class UserEmailUpdate(generics.UpdateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserEmailSerializer
+    permission_classes = (permissions.IsAuthenticated, IsHisResource)
+    lookup_url_kwarg = "user_pk"

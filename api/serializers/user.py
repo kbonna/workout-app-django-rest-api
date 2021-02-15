@@ -27,7 +27,17 @@ class UserProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ("profile_picture",)
 
 
-class UserDetailSerializer(serializers.ModelSerializer):
+class BasicUserDetailSerializer(serializers.ModelSerializer):
+    profile = UserProfileSerializer()
+
+    class Meta:
+        model = User
+        fields = ("pk", "username", "first_name", "last_name", "profile")
+        read_only_fields = ("pk", "username", "first_name", "last_name", "profile")
+        depth = 1
+
+
+class FullUserDetailSerializer(serializers.ModelSerializer):
 
     profile = UserProfileSerializer(required=True)
 
@@ -66,7 +76,7 @@ class UserProfilePictureSerializer(serializers.ModelSerializer):
 
 class UserPasswordSerializer(serializers.ModelSerializer):
 
-    password = serializers.CharField(write_only=True, min_length=4)
+    password = serializers.CharField(write_only=True, min_length=4, required=True)
 
     class Meta:
         model = User
