@@ -1,15 +1,22 @@
 import os
 import tempfile
+import shutil
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.models import User
+from api.models import UserProfile
+from django.core.files import File
 from django.test import override_settings
 from django.urls import reverse
 from PIL import Image
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
+
+# Override MEDIA_ROOT directory just for tests
+TEMP_MEDIA_ROOT = tempfile.TemporaryDirectory(prefix="testMEDIA")
+settings.MEDIA_ROOT = TEMP_MEDIA_ROOT.name
 
 
 def create_image_file(suffix=".png"):
@@ -154,6 +161,36 @@ class UserTest(APITestCase):
         self.assertIn("country", nested_errors)
         self.assertIn("city", nested_errors)
         self.assertEqual(len(nested_errors), 2)
+
+    def test_delete_user(self):
+        """User can delete their own account."""
+        self.authorize(self.owner)
+
+        # Set profile picture and manually move to MEDIA_ROOT directory
+        img_file = create_image_file()
+        img_path = os.path.join(settings.MEDIA_ROOT, os.path.basename(img_file.name))
+        shutil.copy(img_file.name, img_path)
+
+        self.owner.profile.profile_picture = img_path
+        self.owner.profile.save()
+        self.assertTrue(os.path.exists(self.owner.profile.profile_picture.path))
+
+        user_pk = self.owner.pk
+        url = reverse(self.USER_DETAIL_URLPATTERN_NAME, kwargs={"user_pk": user_pk})
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # Check that User object is gone
+        with self.assertRaises(User.DoesNotExist):
+            self.owner.refresh_from_db()
+
+        # Associated profile should also be removed
+        with self.assertRaises(UserProfile.DoesNotExist):
+            UserProfile.objects.get(user=user_pk)
+
+        # Associated profile picture should be removed from filesystem
+        self.assertFalse(os.path.exists(self.owner.profile.profile_picture.path))
 
     # This way real /media/ folder would not be littered by test files
     @override_settings(MEDIA_ROOT=tempfile.TemporaryDirectory(prefix="mediatest").name)

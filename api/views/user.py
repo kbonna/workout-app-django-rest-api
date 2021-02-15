@@ -56,9 +56,14 @@ class UserList(APIView):
 class UserDetail(APIView):
     """Read and update user profile data.
 
-    GET is acessible for any authenticated user. Serializer class is different depending on if user
-    requests his own data. In this case email field is visible, otherwise it is hidden. PUT is
-    accessible only for users trying to change their own profile data."""
+    GET:
+        Acessible for any authenticated user. Serializer class is different depending on if user
+        requests his own data. In this case email field is visible, otherwise it is hidden.
+    PUT:
+        Accessible only for users trying to change their own profile data.
+    DELETE:
+        Accessible only for users wanting to delete their own account.
+    """
 
     permission_classes = (permissions.IsAuthenticated, IsUserOrReadOnly)
 
@@ -72,12 +77,10 @@ class UserDetail(APIView):
 
     def get(self, request, user_pk, format=None):
         user = self.get_object(user_pk)
-
         if request.user.pk == user_pk:
             serializer = FullUserDetailSerializer(user)
         else:
             serializer = BasicUserDetailSerializer(user)
-
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, user_pk, format=None):
@@ -87,6 +90,12 @@ class UserDetail(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, user_pk, format=None):
+        user = self.get_object(user_pk)
+        user.profile.delete()
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class UserProfilePictureUpdate(generics.UpdateAPIView):

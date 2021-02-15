@@ -3,6 +3,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.fields.related import ManyToManyField
 from collections import Counter
+import os
 
 
 class UserProfile(models.Model):
@@ -15,6 +16,12 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"UserProfile(user={self.user})"
+
+    def delete(self, using=None, keep_parents=False):
+        """Delete profile picture file whwen user is deleted."""
+        if os.path.basename(self.profile_picture.name) != "default.png":
+            self.profile_picture.storage.delete(self.profile_picture.name)
+        super().delete()
 
 
 class Tag(models.Model):
