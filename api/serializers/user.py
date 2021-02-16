@@ -1,3 +1,5 @@
+import os
+
 from api.models import UserProfile
 from django.contrib.auth.models import User
 from rest_framework import serializers
@@ -69,6 +71,11 @@ class UserProfilePictureSerializer(serializers.ModelSerializer):
         fields = ("profile_picture",)
 
     def update(self, instance, validated_data):
+        current_profile_picture = os.path.basename(instance.profile_picture.name)
+        # Remove old picture before setting new one
+        if current_profile_picture != "default.png":
+            instance.profile_picture.storage.delete(instance.profile_picture.name)
+
         instance.profile_picture = validated_data.get("profile_picture")
         instance.save()
         return instance

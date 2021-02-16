@@ -6,8 +6,6 @@ from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.models import User
 from api.models import UserProfile
-from django.core.files import File
-from django.test import override_settings
 from django.urls import reverse
 from PIL import Image
 from rest_framework import status
@@ -15,6 +13,7 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 # Override MEDIA_ROOT directory just for tests
+# This way real /media/ folder would not be littered by test files
 TEMP_MEDIA_ROOT = tempfile.TemporaryDirectory(prefix="testMEDIA")
 settings.MEDIA_ROOT = TEMP_MEDIA_ROOT.name
 
@@ -192,8 +191,28 @@ class UserTest(APITestCase):
         # Associated profile picture should be removed from filesystem
         self.assertFalse(os.path.exists(self.owner.profile.profile_picture.path))
 
-    # This way real /media/ folder would not be littered by test files
-    @override_settings(MEDIA_ROOT=tempfile.TemporaryDirectory(prefix="mediatest").name)
+    def test_delete_user_with_default_profile_picture(self):
+        """Deleting user with default profile picture should leave default profile pic intact."""
+        self.authorize(self.owner)
+
+        # Set profile picture and manually move to MEDIA_ROOT directory
+        img_file = create_image_file()
+        img_path = os.path.join(settings.MEDIA_ROOT, "default.png")
+        shutil.copy(img_file.name, img_path)
+
+        self.owner.profile.profile_picture = img_path
+        self.owner.profile.save()
+        self.assertTrue(os.path.exists(self.owner.profile.profile_picture.path))
+
+        user_pk = self.owner.pk
+        url = reverse(self.USER_DETAIL_URLPATTERN_NAME, kwargs={"user_pk": user_pk})
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # Default profile picture should not be removed from filesystem
+        self.assertTrue(os.path.exists(self.owner.profile.profile_picture.path))
+
     def test_update_profile_picture(self):
         """User can update their profile picture."""
         self.authorize(self.owner)
@@ -209,8 +228,36 @@ class UserTest(APITestCase):
         # Profile pic was updated
         self.owner.refresh_from_db()
         self.assertEqual(os.path.basename(self.owner.profile.profile_picture.name), img_fname)
+        self.assertTrue(os.path.exists(self.owner.profile.profile_picture.path))
 
-    @override_settings(MEDIA_ROOT=tempfile.TemporaryDirectory(prefix="mediatest").name)
+    def test_update_profile_picture_old_picture_removed(self):
+        """After updating profile picture, old file should be removed."""
+        self.authorize(self.owner)
+
+        # Create two images
+        old_img_file = create_image_file()
+        new_img_file = create_image_file()
+
+        url = reverse(self.PROFILE_PICTURE_URLPATTERN_NAME, kwargs={"user_pk": self.owner.pk})
+
+        # Upload first profile picture
+        response = self.client.put(url, {"profile_picture": old_img_file}, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.owner.refresh_from_db()
+        old_img_path = self.owner.profile.profile_picture.path
+
+        # Upload second profile picture
+        response = self.client.put(url, {"profile_picture": new_img_file}, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.owner.refresh_from_db()
+        self.assertEqual(
+            os.path.basename(self.owner.profile.profile_picture.name),
+            os.path.basename(new_img_file.name),
+        )
+        self.assertTrue(os.path.exists(self.owner.profile.profile_picture.path))
+        self.assertFalse(os.path.exists(old_img_path))
+
     def test_update_profile_picture_of_other_user(self):
         """User cannot update profile picture of other user."""
         self.authorize(self.owner)
@@ -221,7 +268,6 @@ class UserTest(APITestCase):
         response = self.client.put(url, {"profile_picture": img_file}, format="multipart")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    @override_settings(MEDIA_ROOT=tempfile.TemporaryDirectory(prefix="mediatest").name)
     def test_update_profile_picture_errors(self):
         """Incorrect name of the field (image instead of profile_picture) should be validated by
         serializer."""
@@ -234,7 +280,6 @@ class UserTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("profile_picture", response.data)
 
-    @override_settings(MEDIA_ROOT=tempfile.TemporaryDirectory(prefix="mediatest").name)
     def test_update_profile_picture_wrong_http_methods(self):
         """Profile picture user endpoint should only accept PUT request."""
         self.authorize(self.owner)
