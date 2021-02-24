@@ -118,7 +118,7 @@ class ExerciseTest(APITestCase):
 
     def test_get_my_exercises(self):
         """Get list of exercises owned by you."""
-        url = f"{reverse(self.LIST_URLPATTERN_NAME)}?user={self.owner.pk}"
+        url = f"{reverse(self.LIST_URLPATTERN_NAME)}?user.eq={self.owner.pk}"
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -131,9 +131,46 @@ class ExerciseTest(APITestCase):
         for exercise_dict in response.data:
             self.assertFalse(exercise_dict["can_be_forked"])
 
+    def test_get_exercises_query_params(self):
+        """Exercise list endpoint should accept several query parameters: orderby, limit, user.eq
+        and user.neq."""
+        url = (
+            f"{reverse(self.LIST_URLPATTERN_NAME)}"
+            + f"?limit=3&orderby=-forks_count&user.eq={self.other_user.pk}"
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Right owner
+        self.assertTrue(all(ex["owner_username"] == "other_user" for ex in response.data))
+
+        # Limit to three exercises
+        self.assertEqual(len(response.data), 3)
+
+        # Sorted by forks_count descending
+        self.assertEqual(response.data[0]["forks_count"], 10)
+
+    def test_get_exercises_query_params_errors(self):
+        """Wrong values of query parameters should result in 400."""
+        url = f"{reverse(self.LIST_URLPATTERN_NAME)}?orderby=notExistingColumn"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        url = f"{reverse(self.LIST_URLPATTERN_NAME)}?limit=three"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        url = f"{reverse(self.LIST_URLPATTERN_NAME)}?user.eq=owner"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        url = f"{reverse(self.LIST_URLPATTERN_NAME)}?user.neq=3.14"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_get_discover_exercises(self):
         """Get list of exercises owned by other users."""
-        url = f"{reverse(self.LIST_URLPATTERN_NAME)}?user={self.owner.pk}&discover=True"
+        url = f"{reverse(self.LIST_URLPATTERN_NAME)}?user.neq={self.owner.pk}"
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)

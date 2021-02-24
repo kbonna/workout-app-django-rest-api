@@ -1,13 +1,14 @@
-from api.models import Routine, Exercise
+from api.models import Exercise, Routine
+from api.permissions import IsOwnerOrReadOnly
 from api.serializers.routine import RoutineSerializer
 from api.serializers.routine_unit import RoutineUnitSerializer
-from api.permissions import IsOwnerOrReadOnly
 from django.http import Http404
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from django.contrib import auth
+ROUTINE_FIELDS = [field.name for field in Routine._meta.get_fields()]
+ORDER_BY_OPTIONS = ROUTINE_FIELDS + [f"-{field}" for field in ROUTINE_FIELDS]
 
 
 class RoutineList(APIView):
@@ -17,7 +18,8 @@ class RoutineList(APIView):
     def post(self, request, format=None):
         """Adds new routine for specic user."""
         serializer = RoutineSerializer(
-            data={**request.data, "owner": request.user.pk}, context={"user_pk": request.user.pk}
+            data={**request.data, "owner": request.user.pk},
+            context={"requesting_user_pk": request.user.pk},
         )
         if serializer.is_valid():
             serializer.save()
@@ -28,24 +30,47 @@ class RoutineList(APIView):
         """Return a list of all routines.
 
         Querystring params:
-            ?user=<int>:
+            ?user.eq=<int>:
                 Routines for user with specific pk.
-            ?discover=<bool>:
-                Parameter for discover tab. If True, all routines not owned by the user will be
-                returned.
+            ?user.neq=<int>:
+                Routines that can be discovered by user with specific pk (routines which are not
+                owned by user with this pk).
+            ?orderby=<str>:
+                Name of db column to order queryset. Default order is given by pk values. Django
+                convention is used – the negative sign in front of column name indicates descending
+                order.
+            ?limit=<int>:
+                Limit querysearch to specific number of records.
         """
-        user_pk_filter = request.GET.get("user", None)
-        discover = request.GET.get("discover", False)
+        user_pk_filter = request.query_params.get("user.eq", None)
+        user_pk_exclude = request.query_params.get("user.neq", None)
+        order_by_field = request.query_params.get("orderby", None)
+        limit = request.query_params.get("limit", None)
+
+        # Validation
+        if user_pk_filter is not None and not user_pk_filter.isdigit():
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        if user_pk_exclude is not None and not user_pk_exclude.isdigit():
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        if limit is not None and not limit.isdigit():
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        if order_by_field is not None and order_by_field not in ORDER_BY_OPTIONS:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        queryset = Routine.objects.all()
 
         if user_pk_filter:
-            if discover:
-                queryset = Routine.objects.exclude(owner=user_pk_filter)
-            else:
-                queryset = Routine.objects.filter(owner=user_pk_filter)
-        else:
-            queryset = Routine.objects.all()
+            queryset = queryset.filter(owner=user_pk_filter)
+        if user_pk_exclude:
+            queryset = queryset.exclude(owner=user_pk_exclude)
+        if order_by_field:
+            queryset = queryset.order_by(order_by_field)
+        if limit:
+            queryset = queryset[: int(limit)]
 
-        serializer = RoutineSerializer(queryset, context={"user_pk": request.user.pk}, many=True)
+        serializer = RoutineSerializer(
+            queryset, context={"requesting_user_pk": request.user.pk}, many=True
+        )
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -66,7 +91,7 @@ class RoutineDetail(APIView):
     def get(self, request, routine_id, format=None):
         """Get information about specific routine."""
         routine = self.get_object(routine_id)
-        serializer = RoutineSerializer(routine, context={"user_pk": request.user.pk})
+        serializer = RoutineSerializer(routine, context={"requesting_user_pk": request.user.pk})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def delete(self, request, routine_id, format=None):
@@ -83,7 +108,7 @@ class RoutineDetail(APIView):
         serializer = RoutineSerializer(
             routine,
             data={**request.data, "owner": request.user.pk},
-            context={"user_pk": request.user.pk},
+            context={"requesting_user_pk": request.user.pk},
         )
         if serializer.is_valid():
             serializer.save()
@@ -144,5 +169,5 @@ class RoutineDetail(APIView):
         routine.forks_count += 1
         routine.save()
 
-        serializer = RoutineSerializer(routine, context={"user_pk": request.user.pk})
+        serializer = RoutineSerializer(routine, context={"requesting_user_pk": request.user.pk})
         return Response(serializer.data, status=status.HTTP_201_CREATED)

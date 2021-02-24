@@ -1,6 +1,7 @@
 import os
 import tempfile
 import shutil
+import datetime
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
@@ -40,9 +41,14 @@ class UserTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
 
     def setUp(self):
+        # First user
         self.owner = User.objects.create_user(
             "owner", "owner@mail.com", "test", first_name="Test", last_name="Smith"
         )
+        self.owner.profile.gender = "m"
+        self.owner.profile.date_of_birth = datetime.date(1990, 1, 20)
+        self.owner.profile.save()
+        # Second user
         self.other_user = User.objects.create_user("other_user", "other_user@mail.com", "test")
 
     def test_create_new_user(self):
@@ -77,7 +83,12 @@ class UserTest(APITestCase):
         self.assertNotIn("password", data)
 
         profile = data["profile"]
-        self.assertEqual(profile["profile_picture"], settings.MEDIA_URL + "default.png")
+        self.assertEqual(
+            profile["profile_picture"], settings.MEDIA_URL + "profile_pictures/default.png"
+        )
+        self.assertEqual(profile["gender"], "m")
+        self.assertEqual(profile["gender_display"], "male")
+        self.assertEqual(profile["date_of_birth"], "20.01.1990")
 
     def test_get_user_profile_data_other_user(self):
         """Any authenticated user is able to get data of other user but without email field."""
@@ -97,7 +108,12 @@ class UserTest(APITestCase):
         self.assertNotIn("email", data)
 
         profile = data["profile"]
-        self.assertEqual(profile["profile_picture"], settings.MEDIA_URL + "default.png")
+        self.assertEqual(
+            profile["profile_picture"], settings.MEDIA_URL + "profile_pictures/default.png"
+        )
+        self.assertEqual(profile["gender"], "")
+        self.assertEqual(profile["gender_display"], "")
+        self.assertEqual(profile["date_of_birth"], None)
 
     def test_update_user_profile_data(self):
         """User can update his own profile data."""
@@ -107,11 +123,17 @@ class UserTest(APITestCase):
             "username": self.owner.username + "_edited",
             "first_name": "Editedfirstname",
             "last_name": "Editedlastname",
-            "profile": {"country": "Poland", "city": "Warsaw"},
+            "profile": {
+                "country": "Poland",
+                "city": "Warsaw",
+                "gender": "f",
+                "date_of_birth": "10.10.1992",
+            },
         }
 
         url = reverse(self.USER_DETAIL_URLPATTERN_NAME, kwargs={"user_pk": self.owner.pk})
         response = self.client.put(url, json_data, format="json")
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.owner.refresh_from_db()
@@ -124,6 +146,8 @@ class UserTest(APITestCase):
         self.assertEqual(self.owner.last_name, "Editedlastname")
         self.assertEqual(self.owner.profile.country, "Poland")
         self.assertEqual(self.owner.profile.city, "Warsaw")
+        self.assertEqual(self.owner.profile.gender, "f")
+        self.assertEqual(self.owner.profile.date_of_birth, datetime.date(1992, 10, 10))
 
     def test_update_user_profile_data_errors(self):
         """Profile data should be validated."""
@@ -139,6 +163,8 @@ class UserTest(APITestCase):
                 "country": "c" * 101,
                 "city": "d" * 101,
                 "profile_picture": "picture",
+                "gender": "x",
+                "date_of_birth": "1992 X 2",
             },
         }
 
@@ -159,7 +185,9 @@ class UserTest(APITestCase):
         nested_errors = errors["profile"]
         self.assertIn("country", nested_errors)
         self.assertIn("city", nested_errors)
-        self.assertEqual(len(nested_errors), 2)
+        self.assertIn("gender", nested_errors)
+        self.assertIn("date_of_birth", nested_errors)
+        self.assertEqual(len(nested_errors), 4)
 
     def test_delete_user(self):
         """User can delete their own account."""

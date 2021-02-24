@@ -141,7 +141,7 @@ class RoutineTest(APITestCase):
 
     def test_get_my_routines(self):
         """Get list of routines owned by you."""
-        url = f"{reverse(self.LIST_URLPATTERN_NAME)}?user={self.owner.pk}"
+        url = f"{reverse(self.LIST_URLPATTERN_NAME)}?user.eq={self.owner.pk}"
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -156,7 +156,7 @@ class RoutineTest(APITestCase):
 
     def test_get_discover_routines(self):
         """Get list of routines owned by other users."""
-        url = f"{reverse(self.LIST_URLPATTERN_NAME)}?user={self.owner.pk}&discover=True"
+        url = f"{reverse(self.LIST_URLPATTERN_NAME)}?user.neq={self.owner.pk}"
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -170,6 +170,58 @@ class RoutineTest(APITestCase):
         self.assertTrue(response.data[1]["can_be_forked"])
         self.assertFalse(response.data[2]["can_be_forked"])  # name collision
         self.assertTrue(response.data[3]["can_be_forked"])
+
+    def test_get_routines_query_params(self):
+        """Routine list endpoint should accept several query parameters: orderby, limit, user.eq
+        and user.neq."""
+        url = (
+            f"{reverse(self.LIST_URLPATTERN_NAME)}"
+            + f"?limit=2&orderby=-forks_count&user.eq={self.other_user.pk}"
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Right owner
+        self.assertTrue(all(r["owner_username"] == "other_user" for r in response.data))
+
+        # Limit to two routines
+        self.assertEqual(len(response.data), 2)
+
+        # Sorted by forks_count descending
+        self.assertEqual(response.data[0]["forks_count"], 10)
+
+    def test_get_routines_query_params_errors(self):
+        """Wrong values of query parameters should result in 400."""
+        querystrings = [
+            "orderby=+forks_count",
+            "orderby=notExistingColumn",
+            "orderby=1",
+            "limit=three",
+            "limit=-500",
+            "user.eq=owner",
+            "user.eq=-999",
+            "user.neq=",
+            "user.neq=3.14",
+        ]
+
+        for querystring in querystrings:
+            url = f"{reverse(self.LIST_URLPATTERN_NAME)}?{querystring}"
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_get_routines_query_params_emptyqs(self):
+        """Right but extreme values of query parameters should return empty queryset."""
+        querystrings = [
+            "limit=0",
+            "limit=0&orderby=-exercises",
+            "user.eq=1000",
+        ]
+
+        for querystring in querystrings:
+            url = f"{reverse(self.LIST_URLPATTERN_NAME)}?{querystring}"
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data, [])
 
     def test_get_routine_detail(self):
         """Get detail of single routine."""
@@ -270,6 +322,7 @@ class RoutineTest(APITestCase):
             "can_be_modified": True,
             "forks_count": 0,
             "exercises": [],
+            "muscles_count": {},
         }
 
         # Check only subset of keys excluding pk since it may vary

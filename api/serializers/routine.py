@@ -20,15 +20,15 @@ class RoutineSerializer(serializers.ModelSerializer):
         self.fields["exercises"].context.update(self.context)
 
     def _can_be_forked(self, obj):
-        user_pk = self.context.get("user_pk")
-        if user_pk is not None:
-            return obj.can_be_forked(user_pk)
+        requesting_user_pk = self.context.get("requesting_user_pk")
+        if requesting_user_pk is not None:
+            return obj.can_be_forked(requesting_user_pk)
         return None
 
     def _can_be_modified(self, obj):
-        user_pk = self.context.get("user_pk")
-        if user_pk is not None:
-            return obj.can_be_modified(user_pk)
+        requesting_user_pk = self.context.get("requesting_user_pk")
+        if requesting_user_pk is not None:
+            return obj.can_be_modified(requesting_user_pk)
         return None
 
     class Meta:

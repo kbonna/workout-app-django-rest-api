@@ -2,6 +2,7 @@ import os
 import random
 import shutil
 import string
+import datetime
 
 from api.data.db_dummy_data import EXERCISES_USER_1
 from api.models import Exercise, Muscle, Routine, Tag, YoutubeLink
@@ -59,8 +60,21 @@ class Command(BaseCommand):
         os.system(f'./manage.py shell -c "{superuser_command}"')
 
         # Create users
-        User.objects.create_user("test", "test@mail.com", password="test")
-        User.objects.create_user("test2", "test2@mail.com", password="test")
+        u1 = User.objects.create_user(
+            "test", "test@mail.com", password="test", first_name="Test", last_name="Smith"
+        )
+        u1.profile.date_of_birth = datetime.date(1990, 1, 10)
+        u1.profile.country = "Poland"
+        u1.profile.city = "Warsaw"
+        u1.profile.gender = "m"
+        u1.profile.save()
+
+        u2 = User.objects.create_user(
+            "test2", "test2@mail.com", password="test", first_name="Diana", last_name="Davis"
+        )
+        u2.profile.city = "New York"
+        u2.profile.gender = "f"
+        u2.profile.save()
 
         # Create tags
         tagnames = (

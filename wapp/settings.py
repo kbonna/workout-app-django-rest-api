@@ -141,7 +141,11 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 
-SIMPLE_JWT = {"ACCESS_TOKEN_LIFETIME": datetime.timedelta(days=2)}
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": datetime.timedelta(days=1),
+    "REFRESH_TOKEN_LIFETIME": datetime.timedelta(days=3),
+    "UPDATE_LAST_LOGIN": True,
+}
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")

@@ -1,10 +1,12 @@
 from api.models import Exercise
 from api.serializers.exercise import ExerciseSerializer
-from django.db.models.fields.related import ManyToManyField
 from django.http import Http404
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+EXERCISE_FIELDS = [field.name for field in Exercise._meta.get_fields()]
+ORDER_BY_OPTIONS = EXERCISE_FIELDS + [f"-{field}" for field in EXERCISE_FIELDS]
 
 
 class ExerciseList(APIView):
@@ -23,24 +25,47 @@ class ExerciseList(APIView):
         """Return a list of all exercises.
 
         Querystring params:
-            ?user=<int>:
+            ?user.eq=<int>:
                 Exercises for user with specific pk.
-            ?discover=<bool>:
-                Parameter for discover tab. If True, all exercise not owned by
-                the user will be returned.
+            ?user.neq=<int>:
+                Exercises that can be discovered by user with specific pk (exercises which are not
+                owned by user with this pk).
+            ?orderby=<str>:
+                Name of db column to order queryset. Default order is given by pk values. Django
+                convention is used – the negative sign in front of column name indicates descending
+                order.
+            ?limit=<int>:
+                Limit querysearch to specific number of records.
         """
-        user_id = request.GET.get("user", None)
-        discover = request.GET.get("discover", False)
+        user_pk_filter = request.query_params.get("user.eq", None)
+        user_pk_exclude = request.query_params.get("user.neq", None)
+        order_by_field = request.query_params.get("orderby", None)
+        limit = request.query_params.get("limit", None)
 
-        if user_id:
-            if discover:
-                queryset = Exercise.objects.all().exclude(owner=user_id)
-            else:
-                queryset = Exercise.objects.filter(owner=user_id)
-        else:
-            queryset = Exercise.objects.all()
+        # Validation
+        if user_pk_filter is not None and not user_pk_filter.isdigit():
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        if user_pk_exclude is not None and not user_pk_exclude.isdigit():
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        if limit is not None and not limit.isdigit():
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        if order_by_field is not None and order_by_field not in ORDER_BY_OPTIONS:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = ExerciseSerializer(queryset, context={"user_id": user_id}, many=True)
+        queryset = Exercise.objects.all()
+
+        if user_pk_filter:
+            queryset = queryset.filter(owner=user_pk_filter)
+        if user_pk_exclude:
+            queryset = queryset.exclude(owner=user_pk_exclude)
+        if order_by_field:
+            queryset = queryset.order_by(order_by_field)
+        if limit:
+            queryset = queryset[: int(limit)]
+
+        serializer = ExerciseSerializer(
+            queryset, context={"requesting_user_pk": request.user.pk}, many=True
+        )
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -58,7 +83,7 @@ class ExerciseDetail(APIView):
     def get(self, request, exercise_id, format=None):
         """Get information about specific exercise."""
         exercise = self.get_object(exercise_id)
-        serializer = ExerciseSerializer(exercise, context={"user_id": request.user.pk})
+        serializer = ExerciseSerializer(exercise, context={"requesting_user_pk": request.user.pk})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, exercise_id, format=None):

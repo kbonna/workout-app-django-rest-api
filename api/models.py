@@ -1,24 +1,35 @@
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.files.storage import FileSystemStorage
 from django.db import models
 from django.db.models.fields.related import ManyToManyField
 from collections import Counter
+from django.conf import settings
+
 import os
 
 
 class UserProfile(models.Model):
     """Additional user-related informations."""
 
+    GENDERS = [("m", "male"), ("f", "female")]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     city = models.CharField(blank=True, max_length=100)
     country = models.CharField(blank=True, max_length=100)
-    profile_picture = models.FileField(upload_to="profile_pictures/", default="default.png")
+    gender = models.CharField(blank=True, max_length=1, choices=GENDERS)
+    date_of_birth = models.DateField(blank=True, null=True)
+    profile_picture = models.FileField(
+        upload_to="profile_pictures/",
+        storage=FileSystemStorage(base_url=os.path.join(settings.MEDIA_URL, "profile_pictures/")),
+        default="default.png",
+    )
 
     def __str__(self):
         return f"UserProfile(user={self.user})"
 
     def delete(self, using=None, keep_parents=False):
-        """Delete profile picture file whwen user is deleted."""
+        """Delete profile picture file when user is deleted."""
         if os.path.basename(self.profile_picture.name) != "default.png":
             self.profile_picture.storage.delete(self.profile_picture.name)
         super().delete()

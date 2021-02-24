@@ -23,10 +23,15 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    gender_display = serializers.CharField(source="get_gender_display", read_only=True)
+
     class Meta:
         model = UserProfile
-        fields = ("country", "city", "profile_picture")
+        fields = ("country", "city", "profile_picture", "gender", "gender_display", "date_of_birth")
         read_only_fields = ("profile_picture",)
+        extra_kwargs = {
+            "date_of_birth": {"format": r"%d.%m.%Y", "input_formats": [r"%d.%m.%Y", "iso-8601"]}
+        }
 
 
 class BasicUserDetailSerializer(serializers.ModelSerializer):
@@ -34,8 +39,8 @@ class BasicUserDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("pk", "username", "first_name", "last_name", "profile")
-        read_only_fields = ("pk", "username", "first_name", "last_name", "profile")
+        fields = ("pk", "username", "first_name", "last_name", "last_login", "profile")
+        read_only_fields = ("pk", "username", "first_name", "last_name", "last_login", "profile")
         depth = 1
 
 
@@ -45,8 +50,8 @@ class FullUserDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("pk", "username", "first_name", "last_name", "email", "profile")
-        read_only_fields = ("username", "email")
+        fields = ("pk", "username", "first_name", "last_name", "last_login", "email", "profile")
+        read_only_fields = ("username", "email", "last_login")
         depth = 1
 
     def update(self, instance, validated_data):
@@ -58,6 +63,8 @@ class FullUserDetailSerializer(serializers.ModelSerializer):
         # Update UserProfile fields
         instance.profile.country = validated_data.get("profile").get("country", "")
         instance.profile.city = validated_data.get("profile").get("city", "")
+        instance.profile.gender = validated_data.get("profile").get("gender", "")
+        instance.profile.date_of_birth = validated_data.get("profile").get("date_of_birth", None)
 
         instance.save()
         return instance
