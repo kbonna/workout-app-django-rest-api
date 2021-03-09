@@ -52,7 +52,7 @@ class UserTest(APITestCase):
         self.other_user = User.objects.create_user("other_user", "other_user@mail.com", "test")
 
     def test_create_new_user(self):
-        json_data = {"username": "new_user", "password": "password"}
+        json_data = {"username": "new_user", "password": "password", "email": "user@mail.com"}
 
         url = reverse(self.USER_LIST_URLPATTERN_NAME)
         response = self.client.post(url, json_data, format="json")
@@ -61,11 +61,41 @@ class UserTest(APITestCase):
 
     def test_create_new_user_too_short_password(self):
         """Password for newly created user should be at least 4 characters long."""
-        json_data = {"username": "new_user", "password": "123"}
+        json_data = {"username": "new_user", "password": "123", "email": "user@mail.com"}
 
         url = reverse(self.USER_LIST_URLPATTERN_NAME)
         response = self.client.post(url, json_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_new_user_wrong_email(self):
+        """Email for newly created user should have correct format."""
+        json_data = {"username": "new_user", "password": "123", "email": "myemail"}
+
+        url = reverse(self.USER_LIST_URLPATTERN_NAME)
+        response = self.client.post(url, json_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_new_user_unique_username(self):
+        """Newly created users should have unique username."""
+        json_data = {"username": "owner", "password": "password", "email": "new_email@mail.com"}
+
+        url = reverse(self.USER_LIST_URLPATTERN_NAME)
+        response = self.client.post(url, json_data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("username", response.data)
+        self.assertEqual(len(response.data), 1)
+
+    def test_create_new_user_unique_email(self):
+        """Newly created users should have unique email."""
+        json_data = {"username": "new_user", "password": "password", "email": "owner@mail.com"}
+
+        url = reverse(self.USER_LIST_URLPATTERN_NAME)
+        response = self.client.post(url, json_data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("email", response.data)
+        self.assertEqual(len(response.data), 1)
 
     def test_get_user_profile_data(self):
         """User is able to get own profile data including email."""
@@ -200,7 +230,9 @@ class UserTest(APITestCase):
 
         self.owner.profile.profile_picture = img_path
         self.owner.profile.save()
-        self.assertTrue(os.path.exists(self.owner.profile.profile_picture.path))
+
+        profile_picture_path = self.owner.profile.profile_picture.path
+        self.assertTrue(os.path.exists(profile_picture_path))
 
         user_pk = self.owner.pk
         url = reverse(self.USER_DETAIL_URLPATTERN_NAME, kwargs={"user_pk": user_pk})
@@ -217,7 +249,7 @@ class UserTest(APITestCase):
             UserProfile.objects.get(user=user_pk)
 
         # Associated profile picture should be removed from filesystem
-        self.assertFalse(os.path.exists(self.owner.profile.profile_picture.path))
+        self.assertFalse(os.path.exists(profile_picture_path))
 
     def test_delete_user_with_default_profile_picture(self):
         """Deleting user with default profile picture should leave default profile pic intact."""

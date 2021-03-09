@@ -8,6 +8,11 @@ from django.conf import settings
 
 import os
 
+# Set user email field to be unique
+User._meta.get_field("email")._unique = True
+User._meta.get_field("email").blank = False
+User._meta.get_field("email").null = False
+
 
 class UserProfile(models.Model):
     """Additional user-related informations."""
@@ -21,8 +26,8 @@ class UserProfile(models.Model):
     date_of_birth = models.DateField(blank=True, null=True)
     profile_picture = models.FileField(
         upload_to="profile_pictures/",
-        storage=FileSystemStorage(base_url=os.path.join(settings.MEDIA_URL, "profile_pictures/")),
-        default="default.png",
+        storage=FileSystemStorage(base_url=settings.MEDIA_URL),
+        default="profile_pictures/default.png",
     )
 
     def __str__(self):

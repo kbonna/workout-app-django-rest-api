@@ -80,8 +80,8 @@ class RoutineTest(APITestCase):
 
     def setUp(self):
         # Users
-        self.owner = User.objects.create_user("owner")
-        self.other_user = User.objects.create_user("other_user")
+        self.owner = User.objects.create_user("owner", email="owner@email.com")
+        self.other_user = User.objects.create_user("other_user", email="other_user@email.com")
         self.authorize(self.owner)
 
         # Exercises

@@ -11,7 +11,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("pk", "username", "password")
+        fields = ("pk", "username", "email", "password")
 
     def create(self, validated_data):
         password = validated_data.pop("password", None)
@@ -79,9 +79,10 @@ class UserProfilePictureSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         current_profile_picture = os.path.basename(instance.profile_picture.name)
+
         # Remove old picture before setting new one
         if current_profile_picture != "default.png":
-            instance.profile_picture.storage.delete(instance.profile_picture.name)
+            instance.profile_picture.storage.delete(instance.profile_picture.path)
 
         instance.profile_picture = validated_data.get("profile_picture")
         instance.save()

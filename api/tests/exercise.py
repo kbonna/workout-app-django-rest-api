@@ -66,9 +66,9 @@ class ExerciseTest(APITestCase):
 
     def setUp(self):
         # Users
-        owner = User.objects.create_user("owner")
+        owner = User.objects.create_user("owner", email="owner@mail.com")
+        other_user = User.objects.create_user("other_user", email="other_user@mail.com")
         self.authorize(owner)
-        other_user = User.objects.create_user("other_user")
 
         # Exercise-related objects
         tags = [Tag.objects.create(name=name) for name in ("t1", "t2", "t3")]
