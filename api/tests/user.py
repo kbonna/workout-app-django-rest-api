@@ -340,6 +340,22 @@ class UserTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("profile_picture", response.data)
 
+    # def test_update_empty_profile_picture(self):
+    #     self.authorize(self.owner)
+
+    #     img_file = create_image_file()
+    #     img_fname = os.path.basename(img_file.name)
+
+    #     url = reverse(self.PROFILE_PICTURE_URLPATTERN_NAME, kwargs={"user_pk": self.owner.pk})
+
+    #     response = self.client.put(url, {"profile_picture": img_file}, format="multipart")
+    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    #     # Profile pic was updated
+    #     self.owner.refresh_from_db()
+    #     self.assertEqual(os.path.basename(self.owner.profile.profile_picture.name), img_fname)
+    #     self.assertTrue(os.path.exists(self.owner.profile.profile_picture.path))
+
     def test_update_profile_picture_wrong_http_methods(self):
         """Profile picture user endpoint should only accept PUT request."""
         self.authorize(self.owner)

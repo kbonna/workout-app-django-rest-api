@@ -71,7 +71,9 @@ class FullUserDetailSerializer(serializers.ModelSerializer):
 
 
 class UserProfilePictureSerializer(serializers.ModelSerializer):
-    profile_picture = serializers.ImageField(max_length=100, allow_empty_file=False, required=True)
+    profile_picture = serializers.ImageField(
+        max_length=100, allow_empty_file=True, required=True, use_url=True
+    )
 
     class Meta:
         model = UserProfile
