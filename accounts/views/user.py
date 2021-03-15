@@ -1,13 +1,4 @@
-from api.models import UserProfile
-from api.permissions import IsHisResource, IsUserOrReadOnly
-from api.serializers.user import (
-    BasicUserDetailSerializer,
-    FullUserDetailSerializer,
-    UserEmailSerializer,
-    UserPasswordSerializer,
-    UserProfilePictureSerializer,
-    UserSerializer,
-)
+from api.permissions import IsHisResource, IsUserOrReadOnly  # TODO: move to utils?
 from django.contrib.auth.models import User
 from django.http import Http404
 from rest_framework import generics, permissions, status
@@ -15,6 +6,18 @@ from rest_framework.decorators import api_view
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from accounts.models import UserProfile
+
+# TODO: switch to that import later
+from accounts.serializers import UserProfilePictureSerializer
+
+from ..serializers.user import (
+    BasicUserDetailSerializer,
+    FullUserDetailSerializer,
+    UserEmailSerializer,
+    UserPasswordSerializer,
+    UserSerializer,
+)
 
 
 @api_view(["GET"])
@@ -98,19 +101,6 @@ class UserDetail(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class UserProfilePictureUpdate(generics.UpdateAPIView):
-    queryset = UserProfile
-    serializer_class = UserProfilePictureSerializer
-    permission_classes = (permissions.IsAuthenticated, IsHisResource)
-    parser_classes = (MultiPartParser,)
-    lookup_url_kwarg = "user_pk"
-
-    def get_object(self):
-        queryset = self.get_queryset()
-        obj = queryset.objects.get(user=self.kwargs["user_pk"])
-        return obj
-
-
 class UserPasswordUpdate(generics.UpdateAPIView):
     queryset = User.objects.all()
     serializer_class = UserPasswordSerializer
@@ -123,3 +113,42 @@ class UserEmailUpdate(generics.UpdateAPIView):
     serializer_class = UserEmailSerializer
     permission_classes = (permissions.IsAuthenticated, IsHisResource)
     lookup_url_kwarg = "user_pk"
+
+
+class UserProfilePicture(APIView):
+    """..."""
+
+    permission_classes = (permissions.IsAuthenticated, IsHisResource)
+    parser_classes = (MultiPartParser,)
+
+    @staticmethod
+    def delete_profile_picture_from_storage(profile):
+        """Delete current profile picture for profile instance only when it is not default."""
+        if profile.profile_picture.name != profile._meta.get_field("profile_picture").default:
+            storage = profile.profile_picture.storage
+            storage.delete(profile.profile_picture.name)
+
+    def get_object(self, pk):
+        try:
+            profile = UserProfile.objects.get(user_id=pk)
+            self.check_object_permissions(request=self.request, obj=profile)
+            return profile
+        except UserProfile.DoesNotExist:
+            raise Http404
+
+    def put(self, request, user_pk, format=None):
+        profile = self.get_object(user_pk)
+        serializer = UserProfilePictureSerializer(profile, data=request.data)
+        if serializer.is_valid():
+            self.delete_profile_picture_from_storage(profile=profile)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, user_pk, format=None):
+        profile = self.get_object(user_pk)
+        self.delete_profile_picture_from_storage(profile=profile)
+        # Restore default profile picture
+        profile.profile_picture = UserProfile().profile_picture
+        profile.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)

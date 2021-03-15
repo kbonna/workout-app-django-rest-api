@@ -1,8 +1,7 @@
-import os
-
-from api.models import UserProfile
 from django.contrib.auth.models import User
 from rest_framework import serializers
+
+from ..models import UserProfile
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -28,7 +27,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         fields = ("country", "city", "profile_picture", "gender", "gender_display", "date_of_birth")
-        read_only_fields = ("profile_picture",)
         extra_kwargs = {
             "date_of_birth": {"format": r"%d.%m.%Y", "input_formats": [r"%d.%m.%Y", "iso-8601"]}
         }
@@ -45,7 +43,6 @@ class BasicUserDetailSerializer(serializers.ModelSerializer):
 
 
 class FullUserDetailSerializer(serializers.ModelSerializer):
-
     profile = UserProfileSerializer(required=True)
 
     class Meta:
@@ -71,28 +68,15 @@ class FullUserDetailSerializer(serializers.ModelSerializer):
 
 
 class UserProfilePictureSerializer(serializers.ModelSerializer):
-    profile_picture = serializers.ImageField(
-        max_length=100, allow_empty_file=True, required=True, use_url=True
-    )
-
     class Meta:
         model = UserProfile
         fields = ("profile_picture",)
-
-    def update(self, instance, validated_data):
-        current_profile_picture = os.path.basename(instance.profile_picture.name)
-
-        # Remove old picture before setting new one
-        if current_profile_picture != "default.png":
-            instance.profile_picture.storage.delete(instance.profile_picture.path)
-
-        instance.profile_picture = validated_data.get("profile_picture")
-        instance.save()
-        return instance
+        extra_kwargs = {
+            "profile_picture": {"allow_empty_file": False, "use_url": True, "required": True}
+        }
 
 
 class UserPasswordSerializer(serializers.ModelSerializer):
-
     password = serializers.CharField(write_only=True, min_length=4, required=True)
 
     class Meta:
