@@ -162,3 +162,15 @@ class RoutineUnit(models.Model):
 
     def __str__(self):
         return f"RoutineUnit(routine={self.routine.name}, exercise={self.exercise.name}"
+
+
+class Workout(models.Model):
+    """Completed or planned routine. """
+
+    routine = models.ForeignKey(Routine, related_name="workouts", on_delete=...)
+    date = models.DateTimeField(auto_now_add=True)
+    completed = models.BooleanField(default=False)
+
+
+class WorkoutLogEntry(model.Model):
+    ...

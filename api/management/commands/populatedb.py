@@ -30,7 +30,7 @@ def create_exercise(
 
 
 class Command(BaseCommand):
-    help = "Command printing hello"
+    help = "Command populating database"
 
     def handle(self, *args, **options):
         # Remove all migrations and database file

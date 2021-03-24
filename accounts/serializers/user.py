@@ -28,7 +28,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = UserProfile
         fields = ("country", "city", "profile_picture", "gender", "gender_display", "date_of_birth")
         extra_kwargs = {
-            "date_of_birth": {"format": r"%d.%m.%Y", "input_formats": [r"%d.%m.%Y", "iso-8601"]}
+            "date_of_birth": {"format": r"%Y-%m-%d", "input_formats": [r"%Y-%m-%d", "iso-8601"]}
         }
 
 

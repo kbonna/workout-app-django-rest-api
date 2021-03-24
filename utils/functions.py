@@ -21,23 +21,9 @@ def hash_file(file, block_size=65536):
     return hasher.hexdigest()
 
 
-def hash_upload_to(field_name, base_dir=""):
-    """Function to supply in upload_to field hashing file creating unique filename.
-
-    Args:
-        field_name (str):
-            FileField or ImageField name.
-        base_dir (str):
-            Path to base directory in which files should be saved.
-
-    Returns:
-        upload_to function returning hashed filename.
-    """
-
-    def inner(instance, filename):
-        filename_base, filename_ext = os.path.splitext(filename)
-        file_field = instance.__getattribute__(field_name)
-        new_filename = "{0}{1}".format(hash_file(file_field), filename_ext)
-        return base_dir + new_filename
-
-    return inner
+def hash_upload_to(instance, filename):
+    """In case hashing filenames will be required in the future. Not working template."""
+    filename_base, filename_ext = os.path.splitext(filename)
+    file_field = instance.__getattribute__("profile_picture")
+    new_filename = "{0}{1}".format(hash_file(file_field), filename_ext)
+    return new_filename

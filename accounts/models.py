@@ -4,12 +4,19 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.files.storage import FileSystemStorage
 from django.db import models
-from utils.functions import hash_upload_to
+
+# from utils.functions import hash_upload_to
 
 # Set user email field to be unique
 User._meta.get_field("email")._unique = True
 User._meta.get_field("email").blank = False
 User._meta.get_field("email").null = False
+
+
+def user_profile_picture_path(instance, filename):
+    """Creates user profile picture path as zero padded user pk correct extension."""
+    extension = os.path.splitext(filename)[1]
+    return f"profile_pictures/{instance.user_id:07}{extension}"
 
 
 class UserProfile(models.Model):
@@ -22,8 +29,8 @@ class UserProfile(models.Model):
     country = models.CharField(blank=True, max_length=100)
     gender = models.CharField(blank=True, max_length=1, choices=GENDERS)
     date_of_birth = models.DateField(blank=True, null=True)
-    profile_picture = models.FileField(
-        upload_to=hash_upload_to(field_name="profile_picture", base_dir="profile_pictures/"),
+    profile_picture = models.ImageField(
+        upload_to=user_profile_picture_path,
         storage=FileSystemStorage(base_url=settings.MEDIA_URL),
         default="profile_pictures/default.png",
     )
