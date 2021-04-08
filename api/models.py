@@ -165,12 +165,52 @@ class RoutineUnit(models.Model):
 
 
 class Workout(models.Model):
-    """Completed or planned routine. """
+    """Completed or planned routine."""
 
-    routine = models.ForeignKey(Routine, related_name="workouts", on_delete=...)
-    date = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    date = models.DateField(auto_now_add=True)
     completed = models.BooleanField(default=False)
+    routine = models.ForeignKey(
+        Routine, related_name="workouts", blank=True, null=True, on_delete=models.SET_NULL
+    )
+
+    def __str__(self):
+        return f"Workout(date={self.date}, owner={self.owner})"
 
 
-class WorkoutLogEntry(model.Model):
-    ...
+class WorkoutLogEntry(models.Model):
+    """Smallest workout entity usually consisting of single exercise set.
+
+    It links workout which documents user training with specific exercise. Additional informations
+    about exercise may reflext (depending on exercise type):
+        reps:
+            Number of performed reps.
+        weight:
+            Weight used in the exercise (in kg; precision to two decimal places, max 9999.99kg)
+        time:
+            Time of exercise unit for static exercises or endurance exercises (in seconds; max 7
+            days)
+        distance:
+            Distance travelled during exercise for moving exercise like running or walking (in
+            meters, max 1000km)
+    """
+
+    workout = models.ForeignKey(Workout, on_delete=models.CASCADE, related_name="log_entries")
+    exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE, related_name="log_entries")
+    set_number = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(100)]
+    )
+    reps = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(500)], blank=True, null=True
+    )
+    weight = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
+    time = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(604800)], blank=True, null=True
+    )
+    distance = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(1_000_000)], blank=True, null=True
+    )
+
+    def __str__(self):
+        args = f"workout={self.workout}, exercise={self.exercise}, set_number={self.set_number}"
+        return f"WorkoutLogEntry({args})"

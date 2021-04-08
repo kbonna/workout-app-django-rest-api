@@ -1,6 +1,5 @@
 from lorem_text import lorem
 
-
 EXERCISES_USER_1 = [
     {
         "name": "push ups",
@@ -111,4 +110,80 @@ EXERCISES_USER_1 = [
         "tutorials": [17, 29, 41],
         "instructions": "Good for your muchacha`s.",
     },
+]
+
+EXERCISES_USER_2 = [
+    {"name": "bench press", "kind": "rew"},
+    {"name": "planche", "kind": "tim"},
+    {"name": "diamond push ups", "kind": "rep"},
+    {"name": "pike push ups", "kind": "rep"},
+    {"name": "archer push ups", "kind": "rep"},
+    {"name": "sphinx push ups", "kind": "rep"},
+    {"name": "hindu push ups", "kind": "rep"},
+    {"name": "one arm push ups", "kind": "rep"},
+    {"name": "push ups", "kind": "rep"},
+    {"name": "pull ups", "kind": "rep"},
+    {
+        "name": "plank",
+        "kind": "tim",
+        "instructions": "Arms should be straight.",
+        "tutorials": [60, 61],
+        "muscles": ["abs"],
+    },
+]
+
+ROUTINES_USER_1 = [
+    {
+        "name": "Leg workout A",
+        "kind": "sta",
+        "instructions": "This is the first leg workout.",
+        "exercises": [
+            {"name": "bulgarian split squat", "sets": 3},
+            {"name": "romanian single leg deadlift", "sets": 3},
+            {"name": "pistol squat", "sets": 3},
+            {"name": "lunges", "sets": 3},
+            {"name": "box jumps", "sets": 3},
+        ],
+    },
+    {
+        "name": "Leg workout B",
+        "kind": "cir",
+        "instructions": "My favourite leg workout.",
+        "exercises": [
+            {"name": "bridge", "sets": 3, "instructions": lorem.words(5)},
+            {"name": "hip thrust", "sets": 3, "instructions": lorem.words(10)},
+            {"name": "step ups", "sets": 5, "instructions": lorem.words(20)},
+            {"name": "jogging", "sets": 5, "instructions": lorem.words(40)},
+        ],
+    },
+    {"name": "Push A", "kind": "sta", "forks_count": 11},
+    {"name": "Push B", "kind": "sta"},
+    {"name": "Push C", "kind": "sta"},
+    {"name": "Push D", "kind": "sta"},
+    {"name": "Pull A", "kind": "sta", "forks_count": 3},
+    {"name": "Pull B", "kind": "sta", "forks_count": 2},
+    {"name": "Pull C", "kind": "sta"},
+    {"name": "Pull D", "kind": "sta"},
+    {"name": "FBW A", "kind": "sta", "forks_count": 1},
+    {"name": "FBW B", "kind": "sta"},
+    {"name": "FBW C", "kind": "sta"},
+    {"name": "FBW D", "kind": "sta"},
+]
+
+for i in range(30):
+    ROUTINES_USER_1.append({"name": f"Routine {i}", "kind": "sta"})
+
+ROUTINES_USER_2 = [
+    {"name": "Chest, triceps and shoulders", "kind": "sta"},
+    {"name": "Arms", "kind": "cir"},
+    {"name": "Upper body (bodyweight)", "kind": "sta"},
+    {"name": "Upper body (weights)", "kind": "sta"},
+    {"name": "Powerlifting", "kind": "sta", "forks_count": 3},
+    {"name": "Begginers", "kind": "sta", "forks_count": 2},
+    {"name": "Advanced abs", "kind": "sta"},
+    {"name": "Quads, hamstrings", "kind": "sta"},
+    {"name": "Endurance", "kind": "sta", "forks_count": 1},
+    {"name": "Full body", "kind": "cir"},
+    {"name": "Strenght", "kind": "sta"},
+    {"name": "Hypertrophy", "kind": "sta"},
 ]
