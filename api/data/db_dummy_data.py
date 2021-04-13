@@ -137,6 +137,7 @@ ROUTINES_USER_1 = [
         "name": "Leg workout A",
         "kind": "sta",
         "instructions": "This is the first leg workout.",
+        "forks_count": 5
         "exercises": [
             {"name": "bulgarian split squat", "sets": 3},
             {"name": "romanian single leg deadlift", "sets": 3},
@@ -186,4 +187,8 @@ ROUTINES_USER_2 = [
     {"name": "Full body", "kind": "cir"},
     {"name": "Strenght", "kind": "sta"},
     {"name": "Hypertrophy", "kind": "sta"},
+]
+
+WORKOUTS_USER_1 = [
+    {"date": "2020-12-04", }
 ]
