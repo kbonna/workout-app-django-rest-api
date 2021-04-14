@@ -137,7 +137,7 @@ ROUTINES_USER_1 = [
         "name": "Leg workout A",
         "kind": "sta",
         "instructions": "This is the first leg workout.",
-        "forks_count": 5
+        "forks_count": 5,
         "exercises": [
             {"name": "bulgarian split squat", "sets": 3},
             {"name": "romanian single leg deadlift", "sets": 3},
@@ -190,5 +190,41 @@ ROUTINES_USER_2 = [
 ]
 
 WORKOUTS_USER_1 = [
-    {"date": "2020-12-04", }
+    {
+        "date": "2020-12-01",
+        "completed": True,
+        "exercises": [
+            {"exercise": "push ups", "set_number": 1, "reps": 10},
+            {"exercise": "push ups", "set_number": 2, "reps": 10},
+            {"exercise": "push ups", "set_number": 3, "reps": 10},
+            {"exercise": "pull ups", "set_number": 1, "reps": 15},
+            {"exercise": "pull ups", "set_number": 2, "reps": 10},
+            {"exercise": "pull ups", "set_number": 3, "reps": 5},
+            {"exercise": "intervals run", "set_number": 1, "time": 3600},
+        ],
+    },
+    {
+        "date": "2020-12-08",
+        "completed": True,
+        "routine": "Leg workout A",
+        "exercises": [
+            {"exercise": "bulgarian split squat", "set_number": 1, "reps": 8},
+            {"exercise": "bulgarian split squat", "set_number": 2, "reps": 8},
+            {"exercise": "bulgarian split squat", "set_number": 3, "reps": 8},
+            {"exercise": "romanian single leg deadlift", "set_number": 1, "reps": 8},
+            {"exercise": "romanian single leg deadlift", "set_number": 2, "reps": 8},
+            {"exercise": "romanian single leg deadlift", "set_number": 3, "reps": 8},
+            {"exercise": "pistol squat", "set_number": 1, "reps": 8},
+            {"exercise": "pistol squat", "set_number": 2, "reps": 8},
+            {"exercise": "pistol squat", "set_number": 3, "reps": 8},
+            {"exercise": "lunges", "set_number": 1, "reps": 8},
+            {"exercise": "lunges", "set_number": 2, "reps": 8},
+            {"exercise": "lunges", "set_number": 3, "reps": 8},
+            {"exercise": "box jumps", "set_number": 1, "reps": 8},
+            {"exercise": "box jumps", "set_number": 2, "reps": 8},
+            {"exercise": "box jumps", "set_number": 3, "reps": 8},
+        ],
+    },
 ]
+
+WORKOUTS_USER_2 = []

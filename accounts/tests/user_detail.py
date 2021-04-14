@@ -70,7 +70,7 @@ class UserDetailTest(APITestCase):
         )
         self.assertEqual(profile["gender"], "m")
         self.assertEqual(profile["gender_display"], "male")
-        self.assertEqual(profile["date_of_birth"], "20.01.1990")
+        self.assertEqual(profile["date_of_birth"], "1990-01-20")
 
     def test_get_other_user_profile_data(self):
         """Any authenticated user is able to get data of other user but without email field."""
@@ -264,7 +264,7 @@ class UserDetailTest(APITestCase):
                 "country": "Poland",
                 "city": "Warsaw",
                 "gender": "f",
-                "date_of_birth": "10.10.1992",
+                "date_of_birth": "1992-10-10",
             },
         }
 
