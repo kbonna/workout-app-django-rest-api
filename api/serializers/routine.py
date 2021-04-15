@@ -1,8 +1,23 @@
 from rest_framework import serializers
-from rest_framework.validators import UniqueTogetherValidator
+from rest_framework.validators import UniqueTogetherValidator, ValidationError
 
-from ..models import Routine
-from api.serializers.routine_unit import RoutineUnitSerializer
+from ..models import Routine, RoutineUnit
+
+
+class RoutineUnitSerializer(serializers.ModelSerializer):
+    exercise_name = serializers.CharField(source="exercise.name", read_only=True)
+    routine_name = serializers.CharField(source="routine.name", read_only=True)
+
+    class Meta:
+        model = RoutineUnit
+        fields = ["routine", "routine_name", "exercise", "exercise_name", "sets", "instructions"]
+        read_only_fields = ["routine"]
+
+    def validate_exercise(self, exercise):
+        routine_owner_pk = self.context["requesting_user_pk"]
+        if exercise.owner.pk != routine_owner_pk:
+            raise ValidationError("This is not your exercise.")
+        return exercise
 
 
 class RoutineSerializer(serializers.ModelSerializer):

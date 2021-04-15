@@ -1,7 +1,6 @@
 from api.models import Exercise, Routine
 from api.permissions import IsOwnerOrReadOnly
-from api.serializers.routine import RoutineSerializer
-from api.serializers.routine_unit import RoutineUnitSerializer
+from api.serializers.routine import RoutineSerializer, RoutineUnitSerializer
 from django.http import Http404
 from rest_framework import permissions, status
 from rest_framework.response import Response

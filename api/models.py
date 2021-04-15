@@ -1,3 +1,4 @@
+import datetime
 from collections import Counter
 
 from django.contrib.auth.models import User
@@ -164,11 +165,16 @@ class RoutineUnit(models.Model):
         return f"RoutineUnit(routine={self.routine.name}, exercise={self.exercise.name}"
 
 
+def today():
+    """Returns current date."""
+    return datetime.datetime.now().date()
+
+
 class Workout(models.Model):
     """Completed or planned routine."""
 
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    date = models.DateField(auto_now_add=True)
+    date = models.DateField(default=today)
     completed = models.BooleanField(default=False)
     routine = models.ForeignKey(
         Routine, related_name="workouts", blank=True, null=True, on_delete=models.SET_NULL
@@ -212,5 +218,5 @@ class WorkoutLogEntry(models.Model):
     )
 
     def __str__(self):
-        args = f"workout={self.workout}, exercise={self.exercise}, set_number={self.set_number}"
+        args = f"workout={self.workout.date}, exercise={self.exercise.name}, set_number={self.set_number}"
         return f"WorkoutLogEntry({args})"

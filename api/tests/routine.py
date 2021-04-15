@@ -1,6 +1,5 @@
 from api.serializers.exercise import ExerciseSerializer
-from api.serializers.routine import RoutineSerializer
-from api.serializers.routine_unit import RoutineUnitSerializer
+from api.serializers.routine import RoutineSerializer, RoutineUnitSerializer
 from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from django.urls import reverse

@@ -63,17 +63,28 @@ def create_routine(name, kind, owner, instructions="", forks_count=0, exercises=
 
 def create_workout(date, owner, completed=False, routine=None, exercises=[]):
     """
-
-    routine (str):
+    date (str or Date object):
+        If string is specified it should have YYYY-MM-DD format.
+    owner (User instance):
+        Workout owner.
+    completed (bool):
+        Whether the workout was completed or not. Defaults to False.
+    routine (str, optional):
         Should be passed as a routine name string.
-
+    exercises (list, optional):
+        List of workout log dictionaries. It has to contain "exercise" key with exercise name as
+        value and "set_number" key with integer as value.
     """
     if routine:
         routine = Routine.objects.get(owner=owner, name=routine)
 
     workout = Workout.objects.create(date=date, owner=owner, completed=completed, routine=routine)
 
-    print(workout)
+    # Add exercises
+    for log_entry in exercises:
+        exercise_name = log_entry.pop("exercise")
+        exercise = Exercise.objects.get(owner=owner, name=exercise_name)
+        WorkoutLogEntry.objects.create(workout=workout, exercise=exercise, **log_entry)
 
 
 class Command(BaseCommand):
@@ -182,7 +193,7 @@ class Command(BaseCommand):
                 create_routine(**routine_dict, owner=user)
 
     def create_workouts(self):
-        users = {2: WORKOUTS_USER_1}
+        users = {2: WORKOUTS_USER_1, 3: WORKOUTS_USER_2}
 
         for user_pk, user_workouts in users.items():
             user = User.objects.get(pk=user_pk)

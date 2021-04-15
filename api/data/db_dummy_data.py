@@ -225,6 +225,33 @@ WORKOUTS_USER_1 = [
             {"exercise": "box jumps", "set_number": 3, "reps": 8},
         ],
     },
+    {"date": "2020-12-15", "completed": False, "exercises": []},
+    {"date": "2020-12-22", "completed": False, "exercises": []},
+    {"date": "2020-12-29", "completed": False, "exercises": []},
 ]
 
-WORKOUTS_USER_2 = []
+WORKOUTS_USER_2 = [
+    {
+        "date": "2019-12-01",
+        "completed": True,
+        "exercises": [
+            {"exercise": "bench press", "set_number": 1, "reps": 10, "weight": 85},
+            {"exercise": "bench press", "set_number": 2, "reps": 10, "weight": 82.5},
+            {"exercise": "bench press", "set_number": 3, "reps": 10, "weight": 80},
+            {"exercise": "bench press", "set_number": 4, "reps": 10, "weight": 77.5},
+            {"exercise": "bench press", "set_number": 5, "reps": 10, "weight": 75},
+        ],
+    },
+    {
+        "date": "2019-12-08",
+        "completed": True,
+        "exercises": [
+            {"exercise": "diamond push ups", "set_number": 1, "reps": 5},
+            {"exercise": "pike push ups", "set_number": 1, "reps": 5},
+            {"exercise": "archer push ups", "set_number": 1, "reps": 5},
+            {"exercise": "sphinx push ups", "set_number": 1, "reps": 5},
+            {"exercise": "hindu push ups", "set_number": 1, "reps": 5},
+            {"exercise": "one arm push ups", "set_number": 1, "reps": 5},
+        ],
+    },
+]
