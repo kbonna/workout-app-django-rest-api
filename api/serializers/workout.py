@@ -2,6 +2,8 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator, ValidationError
 
 from ..models import Workout, WorkoutLogEntry, Exercise
+from api.validators import validate_exercite_units
+from django.contrib.auth.models import User
 
 
 class WorkoutLogEntrySerializer(serializers.ModelSerializer):
@@ -36,90 +38,75 @@ class WorkoutLogEntrySerializer(serializers.ModelSerializer):
     def validate(self, data):
         """Check units values correspond to exercise type. For example rep type exercise should only
         have reps field filled and rest of the units field set to NULL."""
-        exercise_kind = data["exercise"].kind
-        if exercise_kind == "rep":
-            if data["reps"] is None:
-                raise ValidationError("For this exercise reps should be specified.")
-            if (data["weight"], data["time"], data["distance"]) != (None, None, None):
-                raise ValidationError("For this exercise only reps should be specified.")
-
+        validate_exercite_units(data["exercise"], data)
         return data
 
 
-# class RoutineSerializer(serializers.ModelSerializer):
-#     exercises = RoutineUnitSerializer(source="routine_units", many=True, required=False)
-#     owner_username = serializers.CharField(source="owner.username", read_only=True)
-#     kind_display = serializers.CharField(source="get_kind_display", read_only=True)
-#     can_be_forked = serializers.SerializerMethodField("_can_be_forked", read_only=True)
-#     can_be_modified = serializers.SerializerMethodField("_can_be_modified", read_only=True)
-#     muscles_count = serializers.DictField(read_only=True)
+class WorkoutLogEntryNestedSerializer(WorkoutLogEntrySerializer):
+    """Modified version of WorkoutLogEntrySerialzier used to serialize and deserialize nested
+    log_entries field on Workout model.
 
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#         # Passing context to the nested serializer (context contain user pk, which is required for
-#         # validating exercise owner match routine owner)
-#         self.fields["exercises"].context.update(self.context)
+    Notes:
+        It differs from original version by setting workout field to read only since when we upload
+        workout data we don't know workout pk in advance (it is not yet created in the db). Unique
+        together validator is also remove to avoid conflicts with existing workouts – integrity
+        related to set numbers is validated on the WorkoutSerializer (object level validation).
+    """
 
-#     def _can_be_forked(self, obj):
-#         requesting_user_pk = self.context.get("requesting_user_pk")
-#         if requesting_user_pk is not None:
-#             return obj.can_be_forked(requesting_user_pk)
-#         return None
+    class Meta(WorkoutLogEntrySerializer.Meta):
+        extra_kwargs = {"workout": {"read_only": True}}
+        validators = []
 
-#     def _can_be_modified(self, obj):
-#         requesting_user_pk = self.context.get("requesting_user_pk")
-#         if requesting_user_pk is not None:
-#             return obj.can_be_modified(requesting_user_pk)
-#         return None
 
-#     class Meta:
-#         model = Routine
-#         fields = (
-#             "pk",
-#             "name",
-#             "kind",
-#             "kind_display",
-#             "owner",
-#             "owner_username",
-#             "instructions",
-#             "can_be_forked",
-#             "can_be_modified",
-#             "forks_count",
-#             "exercises",
-#             "muscles_count",
-#         )
-#         validators = [
-#             UniqueTogetherValidator(
-#                 queryset=Routine.objects.all(),
-#                 fields=["name", "owner"],
-#                 message="You already own this routine.",
-#             )
-#         ]
+class WorkoutSerializer(serializers.ModelSerializer):
+    log_entries = WorkoutLogEntryNestedSerializer(many=True, required=False)
+    owner_username = serializers.CharField(source="owner.username", read_only=True)
+    routine_name = serializers.CharField(source="routine.name", read_only=True)
 
-#     def create(self, validated_data):
-#         routine_units = validated_data.pop("routine_units", [])
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Passing context to the nested serializer (context contain user pk, which is required for
+        # validating workout owner match exercise owner)
+        self.fields["log_entries"].context.update(self.context)
 
-#         instance = Routine(**validated_data)
-#         instance.save()
+    class Meta:
+        model = Workout
+        fields = (
+            "owner",
+            "owner_username",
+            "date",
+            "completed",
+            "routine",
+            "routine_name",
+            "log_entries",
+        )
+        extra_kwargs = {"owner": {"read_only": True}}
 
-#         # Setup many to many relations
-#         for routine_unit in routine_units:
-#             exercise = routine_unit.pop("exercise")
-#             instance.exercises.add(exercise, through_defaults=routine_unit)
+    def create(self, validated_data):
+        log_entries = validated_data.pop("log_entries", [])
 
-#         return instance
+        owner = User.objects.get(pk=self.context["requesting_user_pk"])
+        instance = Workout(owner=owner, **validated_data)
+        instance.save()
 
-#     def update(self, instance, validated_data):
-#         instance.name = validated_data.get("name")
-#         instance.kind = validated_data.get("kind")
-#         instance.instructions = validated_data.get("instructions")
+        # Setup many to many relations
+        for log_entry in log_entries:
+            WorkoutLogEntry.objects.create(workout=instance, **log_entry)
 
-#         # Clear and setup again many to many relations
-#         instance.exercises.clear()
-#         for routine_unit in validated_data["routine_units"]:
-#             exercise = routine_unit.pop("exercise")
-#             instance.exercises.add(exercise, through_defaults=routine_unit)
+        return instance
 
-#         instance.save()
+    def update(self, instance, validated_data):
+        pass
+        # instance.name = validated_data.get("name")
+        # instance.kind = validated_data.get("kind")
+        # instance.instructions = validated_data.get("instructions")
 
-#         return instance
+        # # Clear and setup again many to many relations
+        # instance.exercises.clear()
+        # for routine_unit in validated_data["routine_units"]:
+        #     exercise = routine_unit.pop("exercise")
+        #     instance.exercises.add(exercise, through_defaults=routine_unit)
+
+        # instance.save()
+
+        # return instance
