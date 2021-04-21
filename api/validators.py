@@ -52,9 +52,9 @@ def validate_exercite_units(exercise_obj, data):
     # Check if required data is present and is not None
     for unit in REQUIRED_UNITS[exercise_kind]:
         if unit not in data or data[unit] is None:
-            raise ValidationError(f"For this exercise {unit} should be specified.")
+            raise ValidationError({unit: f"For this exercise {unit} should be specified."})
 
     # Check if forbidden data is misssing or is None
     for unit in FORBIDDEN_UNITS[exercise_kind]:
         if unit in data and data[unit] is not None:
-            raise ValidationError(f"For this exercise {unit} should not be specified.")
+            raise ValidationError({unit: f"For this exercise {unit} should not be specified."})

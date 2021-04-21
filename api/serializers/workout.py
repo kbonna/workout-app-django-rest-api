@@ -4,6 +4,7 @@ from rest_framework.validators import UniqueTogetherValidator, ValidationError
 from ..models import Workout, WorkoutLogEntry, Exercise
 from api.validators import validate_exercite_units
 from django.contrib.auth.models import User
+from django.utils.translation import ugettext_lazy as _
 
 
 class WorkoutLogEntrySerializer(serializers.ModelSerializer):
@@ -30,8 +31,8 @@ class WorkoutLogEntrySerializer(serializers.ModelSerializer):
         ]
 
     def validate_exercise(self, exercise):
-        routine_owner_pk = self.context["requesting_user_pk"]
-        if exercise.owner.pk != routine_owner_pk:
+        requesting_user_pk = self.context["requesting_user_pk"]
+        if exercise.owner.pk != requesting_user_pk:
             raise ValidationError("This is not your exercise.")
         return exercise
 
@@ -81,6 +82,46 @@ class WorkoutSerializer(serializers.ModelSerializer):
             "log_entries",
         )
         extra_kwargs = {"owner": {"read_only": True}}
+
+    def validate_routine(self, routine):
+        requesting_user_pk = self.context["requesting_user_pk"]
+        if routine.owner.pk != requesting_user_pk:
+            raise ValidationError("This is not your routine.")
+        return routine
+
+    def validate(self, data):
+
+        # Log entries required to acheive integrity with specified routines
+        routine_required_logs = set()
+        if "routine" in data:
+            for ru in data["routine"].routine_units.all():
+                routine_required_logs.update([(ru.exercise, s) for s in range(1, ru.sets + 1)])
+
+        # Log entries required to acheive set number integrity & received log entries
+        data_logs = set()
+        integrity_required_logs = set()
+        if "log_entries" in data:
+            for log_entry in data["log_entries"]:
+                data_logs.add((log_entry["exercise"], log_entry["set_number"]))
+                integrity_required_logs.update(
+                    [(log_entry["exercise"], s) for s in range(1, log_entry["set_number"] + 1)]
+                )
+
+        excess_logs = data_logs - routine_required_logs
+        missing_logs = (integrity_required_logs | routine_required_logs) - data_logs
+
+        errors = []
+        for exercise, set_number in excess_logs:
+            errors.append(
+                f"Set {set_number} for exercise {exercise.name} should not be specified for this routine."
+            )
+        for exercise, set_number in missing_logs:
+            errors.append(f"Missing set {set_number} for exercise {exercise.name}.")
+
+        if errors:
+            raise ValidationError({"integrity": errors})
+
+        return data
 
     def create(self, validated_data):
         log_entries = validated_data.pop("log_entries", [])

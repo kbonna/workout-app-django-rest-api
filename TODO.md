@@ -2,7 +2,6 @@
 
 Workout validation:
 
-- completed cannot be True if the date is from the future
 - if Routine is specified make sure that all exercise belongs to that routine, and all routine exercises are part of workout
 - if Routine is specified make sure that user is Routine owner
 

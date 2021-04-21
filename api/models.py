@@ -218,5 +218,5 @@ class WorkoutLogEntry(models.Model):
     )
 
     def __str__(self):
-        args = f"workout={self.workout.date}, exercise={self.exercise.name}, set_number={self.set_number}"
-        return f"WorkoutLogEntry({args})"
+        args = f"{self.workout.date}, exercise={self.exercise.name}, set_number={self.set_number}"
+        return f"WorkoutLogEntry(workout={args})"
