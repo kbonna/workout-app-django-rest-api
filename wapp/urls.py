@@ -18,6 +18,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from django.conf.urls import url
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -25,6 +26,7 @@ urlpatterns = [
     path("token-refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/", include("api.urls")),
     path("api/", include("accounts.urls")),
+    url(r"^silk/", include("silk.urls", namespace="silk")),
 ]
 
 # Change when deployed

@@ -250,9 +250,18 @@ class WorkoutSerializersTestCase(TestCase):
             "log_entries": [
                 {"exercise": self.owner_exercises["rep"].pk, "set_number": 1, "reps": 10},
                 {"exercise": self.owner_exercises["rep"].pk, "set_number": 2, "reps": 10},
-                {"exercise": self.owner_exercises["rep"].pk, "set_number": 5, "reps": 10},
+                {"exercise": self.owner_exercises["tim"].pk, "set_number": 3, "time": 60},
             ],
         }
         deser = WorkoutSerializer(data=data, context=self.context)
         deser.is_valid()
         print(deser.errors)
+        self.assertDictEqual(
+            deser.errors,
+            {
+                "integrity": [
+                    "Set 3 for exercise Exercise tim should not be specified for this routine.",
+                    "Missing set 3 for exercise Exercise rep.",
+                ]
+            },
+        )

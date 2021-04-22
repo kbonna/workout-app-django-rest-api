@@ -11,7 +11,8 @@ ORDER_BY_OPTIONS = EXERCISE_FIELDS + [f"-{field}" for field in EXERCISE_FIELDS]
 
 class ExerciseList(APIView):
 
-    permission_classes = (permissions.IsAuthenticated,)
+    # permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = []
 
     def post(self, request, format=None):
         """Adds new exercise for specic user."""
@@ -52,7 +53,8 @@ class ExerciseList(APIView):
         if order_by_field is not None and order_by_field not in ORDER_BY_OPTIONS:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        queryset = Exercise.objects.all()
+        # Use prefetch_related to reduce number of queries
+        queryset = Exercise.objects.all().prefetch_related("tags", "muscles", "tutorials", "owner")
 
         if user_pk_filter:
             queryset = queryset.filter(owner=user_pk_filter)

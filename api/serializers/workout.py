@@ -90,14 +90,13 @@ class WorkoutSerializer(serializers.ModelSerializer):
         return routine
 
     def validate(self, data):
-
         # Log entries required to acheive integrity with specified routines
         routine_required_logs = set()
         if "routine" in data:
             for ru in data["routine"].routine_units.all():
                 routine_required_logs.update([(ru.exercise, s) for s in range(1, ru.sets + 1)])
 
-        # Log entries required to acheive set number integrity & received log entries
+        # Received log entries & log entries required to acheive set number integrity &
         data_logs = set()
         integrity_required_logs = set()
         if "log_entries" in data:
@@ -113,7 +112,8 @@ class WorkoutSerializer(serializers.ModelSerializer):
         errors = []
         for exercise, set_number in excess_logs:
             errors.append(
-                f"Set {set_number} for exercise {exercise.name} should not be specified for this routine."
+                f"Set {set_number} for exercise {exercise.name}"
+                + " should not be specified for this routine."
             )
         for exercise, set_number in missing_logs:
             errors.append(f"Missing set {set_number} for exercise {exercise.name}.")
