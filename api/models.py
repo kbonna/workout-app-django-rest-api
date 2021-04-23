@@ -179,6 +179,7 @@ class Workout(models.Model):
     routine = models.ForeignKey(
         Routine, related_name="workouts", blank=True, null=True, on_delete=models.SET_NULL
     )
+    exercises = models.ManyToManyField(Exercise, through="WorkoutLogEntry", related_name="workouts")
 
     def __str__(self):
         return f"Workout(date={self.date}, owner={self.owner})"

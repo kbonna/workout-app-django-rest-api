@@ -1,7 +1,13 @@
-from api.models import Workout, WorkoutLogEntry, Exercise, Routine
+import datetime
+
+from api.models import Exercise, Routine, Workout, WorkoutLogEntry
+from api.serializers.workout import WorkoutLogEntrySerializer, WorkoutSerializer
 from django.contrib.auth.models import User
 from django.test import TestCase
-from api.serializers.workout import WorkoutLogEntrySerializer, WorkoutSerializer
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 class WorkoutSerializersTestCase(TestCase):
@@ -242,8 +248,8 @@ class WorkoutSerializersTestCase(TestCase):
             deser.errors, {"log_entries": [{}, {"exercise": ["This is not your exercise."]}]}
         )
 
-    def test_workout_deserialization_errors_set_numbers_integrity(self):
-        """You cannot add workout with exercises with missing sets."""
+    def test_workout_deserialization_errors_routine_integrity(self):
+        """You cannot add workout with exercises not conforming to routine scheme."""
         data = {
             "date": "2020-01-01",
             "routine": self.owner_routine.pk,
@@ -255,13 +261,124 @@ class WorkoutSerializersTestCase(TestCase):
         }
         deser = WorkoutSerializer(data=data, context=self.context)
         deser.is_valid()
-        print(deser.errors)
         self.assertDictEqual(
             deser.errors,
             {
                 "integrity": [
-                    "Set 3 for exercise Exercise tim should not be specified for this routine.",
-                    "Missing set 3 for exercise Exercise rep.",
+                    "Exercise Exercise rep: set 3 is missing.",
+                    "Exercise Exercise tim: set 3 should not be specified for this routine.",
                 ]
             },
         )
+
+    def test_workout_deserialization_errors_set_number_integrity(self):
+        """You cannot add workout with exercises with missing sets."""
+        data = {
+            "date": "2020-01-01",
+            "log_entries": [
+                {"exercise": self.owner_exercises["rep"].pk, "set_number": 1, "reps": 10},
+                {"exercise": self.owner_exercises["rep"].pk, "set_number": 3, "reps": 10},
+                {"exercise": self.owner_exercises["tim"].pk, "set_number": 5, "time": 60},
+                {"exercise": self.owner_exercises["dis"].pk, "set_number": 2, "distance": 1000},
+            ],
+        }
+        deser = WorkoutSerializer(data=data, context=self.context)
+        deser.is_valid()
+        self.assertDictEqual(
+            deser.errors,
+            {
+                "integrity": [
+                    "Exercise Exercise dis: set 1 is missing.",
+                    "Exercise Exercise rep: set 2 is missing.",
+                    "Exercise Exercise tim: set 1 is missing.",
+                    "Exercise Exercise tim: set 2 is missing.",
+                    "Exercise Exercise tim: set 3 is missing.",
+                    "Exercise Exercise tim: set 4 is missing.",
+                ]
+            },
+        )
+
+    def test_workout_create_default_values(self):
+        """Workout can be created without any data, then default values are set. Default day is
+        today's date, owner is derived from the context, completed defaults to False, routine
+        defaults to None."""
+        data = {}
+        deser = WorkoutSerializer(data=data, context=self.context)
+        deser.is_valid()
+        new_workout = deser.save()
+        self.assertEqual(new_workout.date, datetime.datetime.now().date())
+        self.assertEqual(new_workout.owner, self.owner)
+        self.assertEqual(new_workout.completed, False)
+        self.assertEqual(new_workout.routine, None)
+        self.assertEqual(new_workout.log_entries.count(), 0)
+
+    def test_workout_create_non_default_values(self):
+        """Workout can be created without any data, then default values are set. Default day is
+        today's date, owner is derived from the context, completed defaults to False, routine
+        defaults to None."""
+        data = {
+            "date": "2021-01-01",
+            "completed": True,
+            "routine": None,
+            "log_entries": [],
+        }
+        deser = WorkoutSerializer(data=data, context=self.context)
+        deser.is_valid()
+        new_workout = deser.save()
+        self.assertEqual(new_workout.date, datetime.date(2021, 1, 1))
+        self.assertEqual(new_workout.owner, self.owner)
+        self.assertEqual(new_workout.completed, True)
+        self.assertEqual(new_workout.routine, None)
+        self.assertEqual(new_workout.log_entries.count(), 0)
+
+    def test_workout_update(self):
+        """Workout can be updated with new values."""
+        data = {
+            "date": "2021-01-01",
+            "routine": self.owner_routine.pk,
+            "log_entries": [
+                {"exercise": self.owner_exercises["rep"].pk, "set_number": 1, "reps": 10},
+                {"exercise": self.owner_exercises["rep"].pk, "set_number": 2, "reps": 20},
+                {"exercise": self.owner_exercises["rep"].pk, "set_number": 3, "reps": 30},
+            ],
+        }
+        deser = WorkoutSerializer(self.owner_workout, data=data, context=self.context)
+        deser.is_valid()
+        deser.save()
+
+        workout = self.owner_workout
+        workout.refresh_from_db()
+        self.assertEqual(workout.date, datetime.date(2021, 1, 1))
+        self.assertEqual(workout.routine, self.owner_routine)
+        self.assertEqual(workout.log_entries.count(), 3)
+        # Previous log entry should be removed
+        with self.assertRaises(WorkoutLogEntry.DoesNotExist):
+            self.log_entry.refresh_from_db()
+
+
+class WorkoutSerializersTestCase(APITestCase):
+
+    LIST_URLPATTERN_NAME = "workout-list"
+    DETAIL_URLPATTERN_NAME = "workout-detail"
+
+    def authorize(self, user_obj):
+        refresh = RefreshToken.for_user(user_obj)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+    def setUp(self):
+        # Users
+        self.owner = User.objects.create_user("owner", email="owner@email.com")
+        self.other_user = User.objects.create_user("other_user", email="other_user@email.com")
+        self.authorize(self.owner)
+
+    def test_create_workout(self):
+        """Create new workout with valid data."""
+        json_data = {
+            "date": "2020-01-01",
+            "completed": True,
+        }
+
+        url = reverse(self.LIST_URLPATTERN_NAME)
+        response = self.client.post(url, json_data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)

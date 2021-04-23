@@ -352,7 +352,7 @@ class ExerciseTest(APITestCase):
 
         exercise_to_edit.refresh_from_db()
         exercise_stringified_after = str(model_to_dict(exercise_to_edit))
-        self.assertEquals(exercise_stringified_before, exercise_stringified_after)
+        self.assertEqual(exercise_stringified_before, exercise_stringified_after)
 
     def test_edit_exercise_incorrect_data(self):
         """Try to edit exercise with invalid data and expect validation errors."""
@@ -387,7 +387,7 @@ class ExerciseTest(APITestCase):
 
         exercise_to_edit.refresh_from_db()
         exercise_stringified_after = str(model_to_dict(exercise_to_edit))
-        self.assertEquals(exercise_stringified_before, exercise_stringified_after)
+        self.assertEqual(exercise_stringified_before, exercise_stringified_after)
 
     def test_edit_exercise_name_collision(self):
         """Try to edit exercise with valid data but with name of exercise you already own. This
@@ -412,7 +412,7 @@ class ExerciseTest(APITestCase):
 
         exercise_to_edit.refresh_from_db()
         exercise_stringified_after = str(model_to_dict(exercise_to_edit))
-        self.assertEquals(exercise_stringified_before, exercise_stringified_after)
+        self.assertEqual(exercise_stringified_before, exercise_stringified_after)
 
     def test_fork_exercise(self):
         """Fork other user's exercise when this is permitted (no name collision)."""
