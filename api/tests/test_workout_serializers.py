@@ -1,13 +1,15 @@
 import datetime
 
-from api.models import Exercise, Routine, Workout, WorkoutLogEntry
-from api.serializers.workout import WorkoutLogEntrySerializer, WorkoutSerializer
 from django.contrib.auth.models import User
 from django.test import TestCase
-from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APITestCase
-from rest_framework_simplejwt.tokens import RefreshToken
+
+from api.models import Exercise, Routine, Workout, WorkoutLogEntry
+from api.serializers.workout import WorkoutLogEntrySerializer, WorkoutSerializer
+
+
+class RequestMock:
+    def __init__(self, user):
+        self.user = user
 
 
 class WorkoutSerializersTestCase(TestCase):
@@ -35,7 +37,7 @@ class WorkoutSerializersTestCase(TestCase):
             name="Routine", kind="sta", owner=self.other_user
         )
         # Additional context required for deserialization
-        self.context = {"requesting_user_pk": self.owner.pk}
+        self.context = {"request": RequestMock(user=self.owner)}
 
     def test_workout_log_entry_serialization(self):
         """Database objects are correctly translated into dictionaries."""
@@ -62,7 +64,9 @@ class WorkoutSerializersTestCase(TestCase):
             "time": None,
             "distance": None,
         }
-        deser = WorkoutLogEntrySerializer(data=data, context={"requesting_user_pk": self.owner.pk})
+        deser = WorkoutLogEntrySerializer(
+            data=data, context={"request": RequestMock(user=self.owner)}
+        )
         self.assertTrue(deser.is_valid())
 
     def test_workout_log_entry_deserialization_rew(self):
@@ -75,7 +79,9 @@ class WorkoutSerializersTestCase(TestCase):
             "time": None,
             "distance": None,
         }
-        deser = WorkoutLogEntrySerializer(data=data, context={"requesting_user_pk": self.owner.pk})
+        deser = WorkoutLogEntrySerializer(
+            data=data, context={"request": RequestMock(user=self.owner)}
+        )
         self.assertTrue(deser.is_valid())
 
     def test_workout_log_entry_deserialization_tim(self):
@@ -88,7 +94,9 @@ class WorkoutSerializersTestCase(TestCase):
             "time": 3600,
             "distance": None,
         }
-        deser = WorkoutLogEntrySerializer(data=data, context={"requesting_user_pk": self.owner.pk})
+        deser = WorkoutLogEntrySerializer(
+            data=data, context={"request": RequestMock(user=self.owner)}
+        )
         self.assertTrue(deser.is_valid())
 
     def test_workout_log_entry_deserialization_dis(self):
@@ -101,7 +109,9 @@ class WorkoutSerializersTestCase(TestCase):
             "time": None,
             "distance": 1000,
         }
-        deser = WorkoutLogEntrySerializer(data=data, context={"requesting_user_pk": self.owner.pk})
+        deser = WorkoutLogEntrySerializer(
+            data=data, context={"request": RequestMock(user=self.owner)}
+        )
         self.assertTrue(deser.is_valid())
 
     def test_workout_log_entry_deserialization_errors_no_data(self):
@@ -117,7 +127,7 @@ class WorkoutSerializersTestCase(TestCase):
                 "distance": None,
             }
             deser = WorkoutLogEntrySerializer(
-                data=data, context={"requesting_user_pk": self.owner.pk}
+                data=data, context={"request": RequestMock(user=self.owner)}
             )
             self.assertFalse(deser.is_valid())
 
@@ -131,7 +141,9 @@ class WorkoutSerializersTestCase(TestCase):
             "time": 5,
             "distance": None,
         }
-        deser = WorkoutLogEntrySerializer(data=data, context={"requesting_user_pk": self.owner.pk})
+        deser = WorkoutLogEntrySerializer(
+            data=data, context={"request": RequestMock(user=self.owner)}
+        )
         self.assertFalse(deser.is_valid())
 
     def test_workout_log_entry_deserialization_errors_rew(self):
@@ -144,7 +156,9 @@ class WorkoutSerializersTestCase(TestCase):
             "time": 5,
             "distance": None,
         }
-        deser = WorkoutLogEntrySerializer(data=data, context={"requesting_user_pk": self.owner.pk})
+        deser = WorkoutLogEntrySerializer(
+            data=data, context={"request": RequestMock(user=self.owner)}
+        )
         self.assertFalse(deser.is_valid())
 
     def test_workout_log_entry_deserialization_errors_tim(self):
@@ -157,7 +171,9 @@ class WorkoutSerializersTestCase(TestCase):
             "time": 5,
             "distance": None,
         }
-        deser = WorkoutLogEntrySerializer(data=data, context={"requesting_user_pk": self.owner.pk})
+        deser = WorkoutLogEntrySerializer(
+            data=data, context={"request": RequestMock(user=self.owner)}
+        )
         self.assertFalse(deser.is_valid())
 
     def test_workout_log_entry_deserialization_errors_dis(self):
@@ -170,7 +186,9 @@ class WorkoutSerializersTestCase(TestCase):
             "time": 5,
             "distance": 1000,
         }
-        deser = WorkoutLogEntrySerializer(data=data, context={"requesting_user_pk": self.owner.pk})
+        deser = WorkoutLogEntrySerializer(
+            data=data, context={"request": RequestMock(user=self.owner)}
+        )
         self.assertFalse(deser.is_valid())
 
     def test_workout_log_entry_deserialization_errors_set_number_not_unique(self):
@@ -184,7 +202,9 @@ class WorkoutSerializersTestCase(TestCase):
             "time": None,
             "distance": None,
         }
-        deser = WorkoutLogEntrySerializer(data=data, context={"requesting_user_pk": self.owner.pk})
+        deser = WorkoutLogEntrySerializer(
+            data=data, context={"request": RequestMock(user=self.owner)}
+        )
         self.assertFalse(deser.is_valid())
 
     def test_workout_serialization(self):
@@ -354,31 +374,3 @@ class WorkoutSerializersTestCase(TestCase):
         # Previous log entry should be removed
         with self.assertRaises(WorkoutLogEntry.DoesNotExist):
             self.log_entry.refresh_from_db()
-
-
-class WorkoutSerializersTestCase(APITestCase):
-
-    LIST_URLPATTERN_NAME = "workout-list"
-    DETAIL_URLPATTERN_NAME = "workout-detail"
-
-    def authorize(self, user_obj):
-        refresh = RefreshToken.for_user(user_obj)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
-
-    def setUp(self):
-        # Users
-        self.owner = User.objects.create_user("owner", email="owner@email.com")
-        self.other_user = User.objects.create_user("other_user", email="other_user@email.com")
-        self.authorize(self.owner)
-
-    def test_create_workout(self):
-        """Create new workout with valid data."""
-        json_data = {
-            "date": "2020-01-01",
-            "completed": True,
-        }
-
-        url = reverse(self.LIST_URLPATTERN_NAME)
-        response = self.client.post(url, json_data, format="json")
-
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)

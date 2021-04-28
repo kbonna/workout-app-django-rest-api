@@ -31,8 +31,8 @@ class WorkoutLogEntrySerializer(serializers.ModelSerializer):
         ]
 
     def validate_exercise(self, exercise):
-        requesting_user_pk = self.context["requesting_user_pk"]
-        if exercise.owner.pk != requesting_user_pk:
+        print(self.context)
+        if exercise.owner != self.context["request"].user:
             raise ValidationError("This is not your exercise.")
         return exercise
 
@@ -86,8 +86,7 @@ class WorkoutSerializer(serializers.ModelSerializer):
     def validate_routine(self, routine):
         # Validate only if routine is specified, skip for None or empty string
         if routine:
-            requesting_user_pk = self.context["requesting_user_pk"]
-            if routine.owner.pk != requesting_user_pk:
+            if routine.owner != self.context["request"].user:
                 raise ValidationError("This is not your routine.")
         return routine
 
@@ -136,8 +135,7 @@ class WorkoutSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         log_entries = validated_data.pop("log_entries", [])
 
-        owner = User.objects.get(pk=self.context["requesting_user_pk"])
-        instance = Workout(owner=owner, **validated_data)
+        instance = Workout(owner=self.context["request"].user, **validated_data)
         instance.save()
 
         # Setup many to many relations

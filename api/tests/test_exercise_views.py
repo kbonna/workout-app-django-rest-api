@@ -4,7 +4,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
-from ..models import Exercise, Muscle, Tag, YoutubeLink
+from api.models import Exercise, Muscle, Tag, YoutubeLink
 
 
 class ExerciseTest(APITestCase):
@@ -287,16 +287,26 @@ class ExerciseTest(APITestCase):
         url = reverse(self.LIST_URLPATTERN_NAME)
         response = self.client.post(url, json_data, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        for field, value in json_data.items():
-            self.assertTrue(field in response.data, msg=f"{field} should give validation error")
-            if isinstance(value, list):
-                self.assertEqual(
-                    len(value),
-                    len(response.data[field]),
-                    msg=f"{field} should give {len(value)} validation errors"
-                    + f" but gave {len(response.data[field])}",
-                )
+        print(response.data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertDictEqual(
+            response.data,
+            {
+                "name": ["This field may not be blank."],
+                "kind": ['"xxx" is not a valid choice.'],
+                "tags": [
+                    {"name": ["This can only contain letters and digits"]},
+                    {"name": ["This can only contain letters and digits"]},
+                    {"name": ["This field may not be blank."]},
+                ],
+                "muscles": [{"name": ['"xx1" is not a valid choice.']}],
+                "tutorials": [
+                    {"url": ["Invalid YouTube link"]},
+                    {"url": ["This field may not be blank."]},
+                    {"url": ["Invalid YouTube link"]},
+                ],
+            },
+        )
 
     def test_edit_exercise(self):
         """Edit exercise with valid data."""
@@ -408,7 +418,7 @@ class ExerciseTest(APITestCase):
         response = self.client.put(url, json_data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertTrue("non_field_errors" in response.data)
+        self.assertDictEqual(response.data, {"name": ["You already own this exercise."]})
 
         exercise_to_edit.refresh_from_db()
         exercise_stringified_after = str(model_to_dict(exercise_to_edit))

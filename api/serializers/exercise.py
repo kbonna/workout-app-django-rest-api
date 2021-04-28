@@ -1,7 +1,7 @@
 from rest_framework import serializers
-from rest_framework.validators import UniqueTogetherValidator
+from rest_framework.validators import UniqueTogetherValidator, ValidationError
 
-from ..models import Exercise, Tag, Muscle, YoutubeLink
+from api.models import Exercise, Tag, Muscle, YoutubeLink
 from api.serializers.muscle import MuscleSerializer
 from api.serializers.tag import TagSerializer
 from api.serializers.youtube_link import YoutubeLinkSerializer
@@ -16,17 +16,23 @@ class ExerciseSerializer(serializers.ModelSerializer):
     can_be_forked = serializers.SerializerMethodField("_can_be_forked", read_only=True)
 
     def _can_be_forked(self, obj):
-        requesting_user_pk = self.context.get("requesting_user_pk")
-        if requesting_user_pk is not None:
-            return obj.can_be_forked(requesting_user_pk)
+        request = self.context.get("request")
+        if request is not None:
+            return obj.can_be_forked(request.user.pk)
         return None
+
+    def validate(self, data):
+        requesting_user = self.context["request"].user
+        if Exercise.objects.filter(owner=requesting_user, name=data["name"]).exists():
+            raise ValidationError({"name": "You already own this exercise."})
+        return data
 
     def create(self, validated_data):
         tags = validated_data.pop("tags")
         tutorials = validated_data.pop("tutorials")
         muscles = validated_data.pop("muscles")
 
-        instance = Exercise(**validated_data)
+        instance = Exercise(**validated_data, owner=self.context["request"].user)
         instance.save()
 
         for tag_data in tags:
@@ -78,10 +84,4 @@ class ExerciseSerializer(serializers.ModelSerializer):
             "tutorials",
             "instructions",
         )
-        validators = [
-            UniqueTogetherValidator(
-                queryset=Exercise.objects.all(),
-                fields=["name", "owner"],
-                message="You already own this exercise.",
-            )
-        ]
+        extra_kwargs = {"owner": {"read_only": True}}

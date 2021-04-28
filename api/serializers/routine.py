@@ -14,8 +14,7 @@ class RoutineUnitSerializer(serializers.ModelSerializer):
         read_only_fields = ["routine"]
 
     def validate_exercise(self, exercise):
-        routine_owner_pk = self.context["requesting_user_pk"]
-        if exercise.owner.pk != routine_owner_pk:
+        if exercise.owner.pk != self.context["request"].user.pk:
             raise ValidationError("This is not your exercise.")
         return exercise
 
@@ -30,20 +29,20 @@ class RoutineSerializer(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Passing context to the nested serializer (context contain user pk, which is required for
-        # validating exercise owner match routine owner)
+        # Passing context to the nested serializer (context contain request object which is required
+        # for validating exercise)
         self.fields["exercises"].context.update(self.context)
 
     def _can_be_forked(self, obj):
-        requesting_user_pk = self.context.get("requesting_user_pk")
-        if requesting_user_pk is not None:
-            return obj.can_be_forked(requesting_user_pk)
+        request = self.context.get("request")
+        if request is not None:
+            return obj.can_be_forked(request.user.pk)
         return None
 
     def _can_be_modified(self, obj):
-        requesting_user_pk = self.context.get("requesting_user_pk")
-        if requesting_user_pk is not None:
-            return obj.can_be_modified(requesting_user_pk)
+        request = self.context.get("request")
+        if request is not None:
+            return obj.can_be_modified(request.user.pk)
         return None
 
     class Meta:
@@ -62,18 +61,18 @@ class RoutineSerializer(serializers.ModelSerializer):
             "exercises",
             "muscles_count",
         )
-        validators = [
-            UniqueTogetherValidator(
-                queryset=Routine.objects.all(),
-                fields=["name", "owner"],
-                message="You already own this routine.",
-            )
-        ]
+        extra_kwargs = {"owner": {"read_only": True}}
+
+    def validate(self, data):
+        requesting_user = self.context["request"].user
+        if Routine.objects.filter(owner=requesting_user, name=data["name"]).exists():
+            raise ValidationError({"name": "You already own this routine."})
+        return data
 
     def create(self, validated_data):
         routine_units = validated_data.pop("routine_units", [])
 
-        instance = Routine(**validated_data)
+        instance = Routine(**validated_data, owner=self.context["request"].user)
         instance.save()
 
         # Setup many to many relations

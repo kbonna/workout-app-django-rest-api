@@ -1,8 +1,8 @@
+from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from .utils import USER_LIST_URLPATTERN_NAME
-from django.contrib.auth.models import User
 
 # URL common for all tests
 url = reverse(USER_LIST_URLPATTERN_NAME)

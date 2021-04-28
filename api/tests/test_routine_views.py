@@ -1,5 +1,3 @@
-from api.serializers.exercise import ExerciseSerializer
-from api.serializers.routine import RoutineSerializer, RoutineUnitSerializer
 from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from django.urls import reverse
@@ -8,10 +6,12 @@ from rest_framework.exceptions import ErrorDetail
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from ..models import Exercise, Routine
+from api.serializers.exercise import ExerciseSerializer
+from api.serializers.routine import RoutineSerializer, RoutineUnitSerializer
+from api.models import Exercise, Routine
 
 
-class RoutineTest(APITestCase):
+class RoutineViewsTest(APITestCase):
 
     LIST_URLPATTERN_NAME = "routine-list"
     DETAIL_URLPATTERN_NAME = "routine-detail"
@@ -47,6 +47,8 @@ class RoutineTest(APITestCase):
                 User pk corresponding to the user making request.
         """
         self.assertEqual(set(routine_dict.keys()), set(self.ROUTINE_SERIALIZER_FIELDS))
+
+        print(routine_dict)
 
         self.assertEqual(routine_dict["pk"], routine_obj.pk)
         self.assertEqual(routine_dict["name"], routine_obj.name)
@@ -277,7 +279,7 @@ class RoutineTest(APITestCase):
 
         url = reverse(self.LIST_URLPATTERN_NAME)
         response = self.client.post(url, json_data, format="json")
-
+        print(response.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # Object is created properly
@@ -439,7 +441,7 @@ class RoutineTest(APITestCase):
         response = self.client.post(url, json_data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data, {"non_field_errors": ["You already own this routine."]})
+        self.assertDictEqual(response.data, {"name": ["You already own this routine."]})
 
     def test_edit_routine(self):
         """Edit routine with valid data."""
@@ -500,7 +502,7 @@ class RoutineTest(APITestCase):
 
         routine_to_edit.refresh_from_db()
         routine_stringified_after = str(model_to_dict(routine_to_edit))
-        self.assertEquals(routine_stringified_before, routine_stringified_after)
+        self.assertEqual(routine_stringified_before, routine_stringified_after)
 
     def test_edit_routine_incorrect_data(self):
         """Try to edit routine with incorrect data and expect errors."""
@@ -547,7 +549,7 @@ class RoutineTest(APITestCase):
         response = self.client.put(url, json_data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {"non_field_errors": ["You already own this routine."]})
+        self.assertDictEqual(response.data, {"name": ["You already own this routine."]})
 
     def test_fork_routine(self):
         """Fork other user's routine when this is permitted (no name collision)."""
@@ -602,17 +604,11 @@ class RoutineTest(APITestCase):
         routine_to_fork = Routine.objects.get(owner=self.other_user.pk, name="Same name routine")
         owner_routine = Routine.objects.get(owner=self.owner.pk, name="Same name routine")
 
-        owner_routine_data_before = RoutineSerializer(owner_routine).data
-
         url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"routine_id": routine_to_fork.pk})
         response = self.client.post(url)
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-        # Owner routine should not be changed
-        owner_routine.refresh_from_db()
-        owner_routine_data_after = RoutineSerializer(owner_routine).data
-        self.assertEqual(owner_routine_data_before, owner_routine_data_after)
+        self.assertDictEqual(response.data, {"name": ["You already own routine with this name."]})
 
     def test_fork_routine_you_own(self):
         """Try to fork your own routine."""

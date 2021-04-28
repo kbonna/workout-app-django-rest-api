@@ -5,73 +5,21 @@ from django.http import Http404
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.viewsets import GenericViewSet
+from utils.mixins import PostMixin, GetWithFilteringMixin
 
 ROUTINE_FIELDS = [field.name for field in Routine._meta.get_fields()]
 ORDER_BY_OPTIONS = ROUTINE_FIELDS + [f"-{field}" for field in ROUTINE_FIELDS]
 
 
-class RoutineList(APIView):
+class RoutineList(GenericViewSet, GetWithFilteringMixin, PostMixin):
 
+    queryset = Routine.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = RoutineSerializer
 
-    def post(self, request, format=None):
-        """Adds new routine for specic user."""
-        serializer = RoutineSerializer(
-            data={**request.data, "owner": request.user.pk},
-            context={"requesting_user_pk": request.user.pk},
-        )
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_403_FORBIDDEN)
-
-    def get(self, request, format=None):
-        """Return a list of all routines.
-
-        Querystring params:
-            ?user.eq=<int>:
-                Routines for user with specific pk.
-            ?user.neq=<int>:
-                Routines that can be discovered by user with specific pk (routines which are not
-                owned by user with this pk).
-            ?orderby=<str>:
-                Name of db column to order queryset. Default order is given by pk values. Django
-                convention is used – the negative sign in front of column name indicates descending
-                order.
-            ?limit=<int>:
-                Limit querysearch to specific number of records.
-        """
-        user_pk_filter = request.query_params.get("user.eq", None)
-        user_pk_exclude = request.query_params.get("user.neq", None)
-        order_by_field = request.query_params.get("orderby", None)
-        limit = request.query_params.get("limit", None)
-
-        # Validation
-        if user_pk_filter is not None and not user_pk_filter.isdigit():
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-        if user_pk_exclude is not None and not user_pk_exclude.isdigit():
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-        if limit is not None and not limit.isdigit():
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-        if order_by_field is not None and order_by_field not in ORDER_BY_OPTIONS:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-
-        queryset = Routine.objects.all()
-
-        if user_pk_filter:
-            queryset = queryset.filter(owner=user_pk_filter)
-        if user_pk_exclude:
-            queryset = queryset.exclude(owner=user_pk_exclude)
-        if order_by_field:
-            queryset = queryset.order_by(order_by_field)
-        if limit:
-            queryset = queryset[: int(limit)]
-
-        serializer = RoutineSerializer(
-            queryset, context={"requesting_user_pk": request.user.pk}, many=True
-        )
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def get_filtering_kwargs(self):
+        return {"prefetch_related": ("owner", "exercises"), "order_by_options": ORDER_BY_OPTIONS}
 
 
 class RoutineDetail(APIView):
@@ -90,7 +38,7 @@ class RoutineDetail(APIView):
     def get(self, request, routine_id, format=None):
         """Get information about specific routine."""
         routine = self.get_object(routine_id)
-        serializer = RoutineSerializer(routine, context={"requesting_user_pk": request.user.pk})
+        serializer = RoutineSerializer(routine, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def delete(self, request, routine_id, format=None):
@@ -104,11 +52,7 @@ class RoutineDetail(APIView):
     def put(self, request, routine_id, format=None):
         """Edit routine data. This can be done only if the user requesting edit is routine owner."""
         routine = self.get_object(routine_id)
-        serializer = RoutineSerializer(
-            routine,
-            data={**request.data, "owner": request.user.pk},
-            context={"requesting_user_pk": request.user.pk},
-        )
+        serializer = RoutineSerializer(routine, data=request.data, context={"request": request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -129,9 +73,9 @@ class RoutineDetail(APIView):
         routine = self.get_object(routine_id, validate_permissions=False)
 
         # Detect name collision
-        if Routine.objects.filter(owner=request.user, name=routine.name).count():
+        if Routine.objects.filter(owner=request.user, name=routine.name).exists():
             return Response(
-                {"non_field_errors": "You already own routine with this name."},
+                {"name": ["You already own routine with this name."]},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -168,5 +112,5 @@ class RoutineDetail(APIView):
         routine.forks_count += 1
         routine.save()
 
-        serializer = RoutineSerializer(routine, context={"requesting_user_pk": request.user.pk})
+        serializer = RoutineSerializer(routine, context={"request": request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
