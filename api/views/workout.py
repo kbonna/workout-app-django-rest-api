@@ -18,9 +18,6 @@ class WorkoutList(GenericViewSet, PostMixin, GetWithFilteringMixin):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = WorkoutSerializer
 
-    def get_prefetch_related(self):
-        return ("owner",)
-
     def get_filtering_kwargs(self):
         return {"prefetch_related": ("owner",), "order_by_options": ORDER_BY_OPTIONS}
 

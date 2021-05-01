@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
-from api.models import Workout
+from api.models import Workout, Exercise, Routine
 import datetime
 
 
@@ -21,6 +21,14 @@ class WorkoutViewsTestCase(APITestCase):
         self.owner = User.objects.create_user("owner", email="owner@email.com")
         self.other_user = User.objects.create_user("other_user", email="other_user@email.com")
         self.authorize(self.owner)
+        # Exercises & Routines
+        self.owner_exercise_rep = Exercise.objects.create(name="Rep", kind="rep", owner=self.owner)
+        self.owner_exercise_rew = Exercise.objects.create(name="Rew", kind="rew", owner=self.owner)
+        self.owner_routine = Routine.objects.create(name="Routine", kind="sta", owner=self.owner)
+        self.owner_routine.exercises.add(self.owner_exercise_rep, through_defaults={"sets": 3})
+        self.other_user_exercise_rep = Exercise.objects.create(
+            name="Rep", kind="rep", owner=self.other_user
+        )
         # Workouts
         self.owner_workout_1 = Workout.objects.create(
             owner=self.owner, date=datetime.date(2021, 1, 1)
@@ -30,6 +38,9 @@ class WorkoutViewsTestCase(APITestCase):
         )
         self.other_user_workout = Workout.objects.create(
             owner=self.other_user, date=datetime.date(2021, 1, 1)
+        )
+        self.other_user_workout.exercises.add(
+            self.other_user_exercise_rep, through_defaults={"set_number": 1, "reps": 10}
         )
 
     def test_create_workout(self):
@@ -72,3 +83,4 @@ class WorkoutViewsTestCase(APITestCase):
         url = reverse(self.LIST_URLPATTERN_NAME)
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        print(response.data)

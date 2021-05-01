@@ -12,6 +12,14 @@ class PostMixin:
         return Response(serializer.errors, status=status.HTTP_403_FORBIDDEN)
 
 
+class GetMixin:
+    def get(self, request, format=None):
+        queryset = self.get_queryset()
+        serializer_class = self.get_serializer_class()
+        serializer = serializer_class(queryset, context={"request": request}, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class GetWithFilteringMixin:
     """
 

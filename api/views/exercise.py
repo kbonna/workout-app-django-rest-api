@@ -1,27 +1,25 @@
+from api.filters.exercise import ExerciseFilter
 from api.models import Exercise
 from api.serializers.exercise import ExerciseSerializer
 from django.http import Http404
+from django_filters import rest_framework as filters
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
-from utils.mixins import PostMixin, GetWithFilteringMixin
+from utils.mixins import GetMixin, PostMixin
+from rest_framework.generics import ListAPIView
+from rest_framework import mixins
+from api.filters.backends import DotNotationFilterBackend
 
-EXERCISE_FIELDS = [field.name for field in Exercise._meta.get_fields()]
-ORDER_BY_OPTIONS = EXERCISE_FIELDS + [f"-{field}" for field in EXERCISE_FIELDS]
 
+class ExerciseList(GenericViewSet, mixins.ListModelMixin, mixins.CreateModelMixin):
 
-class ExerciseList(GenericViewSet, GetWithFilteringMixin, PostMixin):
-
-    queryset = Exercise.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
+    queryset = Exercise.objects.all()
     serializer_class = ExerciseSerializer
-
-    def get_filtering_kwargs(self):
-        return {
-            "prefetch_related": ("owner", "tags", "tutorials", "muscles"),
-            "order_by_options": ORDER_BY_OPTIONS,
-        }
+    filter_backends = (DotNotationFilterBackend,)
+    filterset_class = ExerciseFilter
 
 
 class ExerciseDetail(APIView):

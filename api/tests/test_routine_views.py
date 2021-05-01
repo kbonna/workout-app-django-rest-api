@@ -48,8 +48,6 @@ class RoutineViewsTest(APITestCase):
         """
         self.assertEqual(set(routine_dict.keys()), set(self.ROUTINE_SERIALIZER_FIELDS))
 
-        print(routine_dict)
-
         self.assertEqual(routine_dict["pk"], routine_obj.pk)
         self.assertEqual(routine_dict["name"], routine_obj.name)
         self.assertEqual(routine_dict["kind"], routine_obj.kind)
@@ -279,7 +277,6 @@ class RoutineViewsTest(APITestCase):
 
         url = reverse(self.LIST_URLPATTERN_NAME)
         response = self.client.post(url, json_data, format="json")
-        print(response.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # Object is created properly

@@ -6,7 +6,9 @@ from api.views.workout import WorkoutList, WorkoutDetail
 
 
 urlpatterns = [
-    path("exercises/", ExerciseList.as_view({"post": "post", "get": "get"}), name="exercise-list"),
+    path(
+        "exercises/", ExerciseList.as_view({"post": "create", "get": "list"}), name="exercise-list"
+    ),
     path("exercises/<int:exercise_id>", ExerciseDetail.as_view(), name="exercise-detail"),
     path("routines/", RoutineList.as_view({"post": "post", "get": "get"}), name="routine-list"),
     path("routines/<int:routine_id>", RoutineDetail.as_view(), name="routine-detail"),

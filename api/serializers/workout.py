@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator, ValidationError
 
-from ..models import Workout, WorkoutLogEntry, Exercise
+from api.models import Workout, WorkoutLogEntry, Exercise
 from api.validators import validate_exercite_units
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
@@ -31,7 +31,6 @@ class WorkoutLogEntrySerializer(serializers.ModelSerializer):
         ]
 
     def validate_exercise(self, exercise):
-        print(self.context)
         if exercise.owner != self.context["request"].user:
             raise ValidationError("This is not your exercise.")
         return exercise

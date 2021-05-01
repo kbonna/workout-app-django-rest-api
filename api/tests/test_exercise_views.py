@@ -287,8 +287,7 @@ class ExerciseTest(APITestCase):
         url = reverse(self.LIST_URLPATTERN_NAME)
         response = self.client.post(url, json_data, format="json")
 
-        print(response.data)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertDictEqual(
             response.data,
             {
