@@ -198,8 +198,6 @@ class RoutineViewsTest(APITestCase):
             "limit=three",
             "limit=-500",
             "user.eq=owner",
-            "user.eq=-999",
-            "user.neq=",
             "user.neq=3.14",
         ]
 
@@ -212,7 +210,6 @@ class RoutineViewsTest(APITestCase):
         """Right but extreme values of query parameters should return empty queryset."""
         querystrings = [
             "limit=0",
-            "limit=0&orderby=-exercises",
             "user.eq=1000",
         ]
 
@@ -356,7 +353,7 @@ class RoutineViewsTest(APITestCase):
         url = reverse(self.LIST_URLPATTERN_NAME)
         response = self.client.post(url, json_data, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.data,
             {
@@ -383,7 +380,7 @@ class RoutineViewsTest(APITestCase):
         url = reverse(self.LIST_URLPATTERN_NAME)
         response = self.client.post(url, json_data, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.data,
             {
@@ -437,7 +434,7 @@ class RoutineViewsTest(APITestCase):
         url = reverse(self.LIST_URLPATTERN_NAME)
         response = self.client.post(url, json_data, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertDictEqual(response.data, {"name": ["You already own this routine."]})
 
     def test_edit_routine(self):

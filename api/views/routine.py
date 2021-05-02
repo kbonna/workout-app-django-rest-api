@@ -1,25 +1,37 @@
-from api.models import Exercise, Routine
-from api.permissions import IsOwnerOrReadOnly
-from api.serializers.routine import RoutineSerializer, RoutineUnitSerializer
 from django.http import Http404
-from rest_framework import permissions, status
+from django_filters import rest_framework as filters
+from rest_framework import mixins, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
-from utils.mixins import PostMixin, GetWithFilteringMixin
+from utils.mixins import GetWithFilteringMixin, PostMixin
 
-ROUTINE_FIELDS = [field.name for field in Routine._meta.get_fields()]
-ORDER_BY_OPTIONS = ROUTINE_FIELDS + [f"-{field}" for field in ROUTINE_FIELDS]
+from api.filters.routines import RoutineFilter
+from api.models import Exercise, Routine
+from api.permissions import IsOwnerOrReadOnly
+from api.serializers.routine import RoutineSerializer, RoutineUnitSerializer
+
+# ROUTINE_FIELDS = [field.name for field in Routine._meta.get_fields()]
+# ORDER_BY_OPTIONS = ROUTINE_FIELDS + [f"-{field}" for field in ROUTINE_FIELDS]
 
 
-class RoutineList(GenericViewSet, GetWithFilteringMixin, PostMixin):
+# class RoutineList(GenericViewSet, GetWithFilteringMixin, PostMixin):
+
+#     queryset = Routine.objects.all()
+#     permission_classes = (permissions.IsAuthenticated,)
+#     serializer_class = RoutineSerializer
+
+#     def get_filtering_kwargs(self):
+#         return {"prefetch_related": ("owner", "exercises"), "order_by_options": ORDER_BY_OPTIONS}
+
+
+class RoutineList(GenericViewSet, mixins.ListModelMixin, mixins.CreateModelMixin):
 
     queryset = Routine.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = RoutineSerializer
-
-    def get_filtering_kwargs(self):
-        return {"prefetch_related": ("owner", "exercises"), "order_by_options": ORDER_BY_OPTIONS}
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_class = RoutineFilter
 
 
 class RoutineDetail(APIView):

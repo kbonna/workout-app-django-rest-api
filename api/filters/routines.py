@@ -1,16 +1,16 @@
 from django_filters import rest_framework as filters
 from api.filters.utils import (
     IntegerFilter,
-    MapQueryParamNameWidget,
     PositiveIntegerFilter,
+    MapQueryParamNameWidget,
     filter_limit,
 )
-from api.models import Exercise
+from api.models import Routine
 
 map_widget = MapQueryParamNameWidget(mapping={".": "__"})
 
 
-class ExerciseFilter(filters.FilterSet):
+class RoutineFilter(filters.FilterSet):
 
     user__eq = IntegerFilter(field_name="owner", widget=map_widget)
     user__neq = IntegerFilter(field_name="owner", exclude=True, widget=map_widget)
@@ -18,5 +18,5 @@ class ExerciseFilter(filters.FilterSet):
     limit = PositiveIntegerFilter(method=filter_limit)
 
     class Meta:
-        model = Exercise
+        model = Routine
         fields = ["user__eq", "user__neq", "orderby", "limit"]

@@ -83,4 +83,3 @@ class WorkoutViewsTestCase(APITestCase):
         url = reverse(self.LIST_URLPATTERN_NAME)
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        print(response.data)

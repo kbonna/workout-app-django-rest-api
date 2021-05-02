@@ -1,5 +1,9 @@
 # [!] Workout API
 
+- move queryparams function to utils app
+- add more tests for workout filters
+- refactor Routine and Workout List endpoints using django-filter and mixins
+
 Workout validation:
 
 - if Routine is specified make sure that all exercise belongs to that routine, and all routine exercises are part of workout

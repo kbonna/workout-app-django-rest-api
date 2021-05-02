@@ -1,16 +1,14 @@
-from api.filters.exercise import ExerciseFilter
-from api.models import Exercise
-from api.serializers.exercise import ExerciseSerializer
 from django.http import Http404
 from django_filters import rest_framework as filters
-from rest_framework import permissions, status
+from rest_framework import mixins, permissions, status
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
-from utils.mixins import GetMixin, PostMixin
-from rest_framework.generics import ListAPIView
-from rest_framework import mixins
-from api.filters.backends import DotNotationFilterBackend
+
+from api.filters.exercise import ExerciseFilter
+from api.models import Exercise
+from api.serializers.exercise import ExerciseSerializer
 
 
 class ExerciseList(GenericViewSet, mixins.ListModelMixin, mixins.CreateModelMixin):
@@ -18,7 +16,7 @@ class ExerciseList(GenericViewSet, mixins.ListModelMixin, mixins.CreateModelMixi
     permission_classes = (permissions.IsAuthenticated,)
     queryset = Exercise.objects.all()
     serializer_class = ExerciseSerializer
-    filter_backends = (DotNotationFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend,)
     filterset_class = ExerciseFilter
 
 
