@@ -6,23 +6,10 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 from utils.mixins import GetWithFilteringMixin, PostMixin
 
-from api.filters.routines import RoutineFilter
+from api.filters.routine import RoutineFilter
 from api.models import Exercise, Routine
 from api.permissions import IsOwnerOrReadOnly
 from api.serializers.routine import RoutineSerializer, RoutineUnitSerializer
-
-# ROUTINE_FIELDS = [field.name for field in Routine._meta.get_fields()]
-# ORDER_BY_OPTIONS = ROUTINE_FIELDS + [f"-{field}" for field in ROUTINE_FIELDS]
-
-
-# class RoutineList(GenericViewSet, GetWithFilteringMixin, PostMixin):
-
-#     queryset = Routine.objects.all()
-#     permission_classes = (permissions.IsAuthenticated,)
-#     serializer_class = RoutineSerializer
-
-#     def get_filtering_kwargs(self):
-#         return {"prefetch_related": ("owner", "exercises"), "order_by_options": ORDER_BY_OPTIONS}
 
 
 class RoutineList(GenericViewSet, mixins.ListModelMixin, mixins.CreateModelMixin):

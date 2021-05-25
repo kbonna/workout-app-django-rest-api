@@ -1,25 +1,22 @@
+from api.filters.workout import WorkoutFilter
 from api.models import Workout
 from api.permissions import IsOwnerOrReadOnly
 from api.serializers.workout import WorkoutSerializer
-from rest_framework import permissions, status
+from django_filters import rest_framework as filters
+from rest_framework import mixins, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
-from utils.mixins import PostMixin, GetWithFilteringMixin
+from utils.mixins import GetWithFilteringMixin, PostMixin
 
 
-WORKOUT_FIELDS = [field.name for field in Workout._meta.get_fields()]
-ORDER_BY_OPTIONS = WORKOUT_FIELDS + [f"-{field}" for field in WORKOUT_FIELDS]
-
-
-class WorkoutList(GenericViewSet, PostMixin, GetWithFilteringMixin):
+class WorkoutList(GenericViewSet, mixins.ListModelMixin, mixins.CreateModelMixin):
 
     queryset = Workout.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = WorkoutSerializer
-
-    def get_filtering_kwargs(self):
-        return {"prefetch_related": ("owner",), "order_by_options": ORDER_BY_OPTIONS}
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_class = WorkoutFilter
 
 
 class WorkoutDetail(APIView):
