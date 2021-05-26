@@ -19,29 +19,38 @@ class WorkoutList(GenericViewSet, mixins.ListModelMixin, mixins.CreateModelMixin
     filterset_class = WorkoutFilter
 
 
-class WorkoutDetail(APIView):
+class WorkoutDetail(
+    GenericViewSet, mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin
+):
+    queryset = Workout.objects.all()
+    serializer_class = WorkoutSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+    lookup_url_kwarg = "workout_pk"
 
-    permission_classes = (permissions.IsAuthenticated, IsOwnerOrReadOnly)
 
-    def get_object(self, pk, validate_permissions=True):
-        try:
-            instance = Workout.objects.get(pk=pk)
-            if validate_permissions:
-                self.check_object_permissions(request=self.request, obj=instance)
-            return instance
-        except Workout.DoesNotExist:
-            raise Http404
+# class WorkoutDetail(APIView):
 
-    def get(self, request, workout_id, format=None):
-        """Get information about specific workout."""
-        workout = self.get_object(workout_id)
-        serializer = WorkoutSerializer(workout, context={"requesting_user_pk": request.user.pk})
-        return Response(serializer.data, status=status.HTTP_200_OK)
+#     permission_classes = (permissions.IsAuthenticated, IsOwnerOrReadOnly)
 
-    def delete(self, request, workout_id, format=None):
-        """Delete specific workout. This can be done only if the user requesting delete is an
-        workout owner.
-        """
-        workout = self.get_object(workout_id)
-        workout.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+#     def get_object(self, pk, validate_permissions=True):
+#         try:
+#             instance = Workout.objects.get(pk=pk)
+#             if validate_permissions:
+#                 self.check_object_permissions(request=self.request, obj=instance)
+#             return instance
+#         except Workout.DoesNotExist:
+#             raise Http404
+
+#     def get(self, request, workout_id, format=None):
+#         """Get information about specific workout."""
+#         workout = self.get_object(workout_id)
+#         serializer = WorkoutSerializer(workout, context={"requesting_user_pk": request.user.pk})
+#         return Response(serializer.data, status=status.HTTP_200_OK)
+
+#     def delete(self, request, workout_id, format=None):
+#         """Delete specific workout. This can be done only if the user requesting delete is an
+#         workout owner.
+#         """
+#         workout = self.get_object(workout_id)
+#         workout.delete()
+#         return Response(status=status.HTTP_204_NO_CONTENT)

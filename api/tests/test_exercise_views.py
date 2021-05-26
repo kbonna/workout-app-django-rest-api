@@ -190,7 +190,7 @@ class ExerciseTest(APITestCase):
         """Get detail of single exercise."""
         exercise = self.owner_exercises[0]
 
-        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_id": exercise.pk})
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_pk": exercise.pk})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -202,7 +202,7 @@ class ExerciseTest(APITestCase):
         exercise_to_delete = Exercise.objects.get(owner=self.owner.pk, name="exercise 1")
         n_exercises_before = len(Exercise.objects.all())
 
-        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_id": exercise_to_delete.pk})
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_pk": exercise_to_delete.pk})
         response = self.client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -215,7 +215,7 @@ class ExerciseTest(APITestCase):
         exercise_to_delete = Exercise.objects.get(owner=self.other_user.pk, name="exercise 1")
         n_exercises_before = len(Exercise.objects.all())
 
-        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_id": exercise_to_delete.pk})
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_pk": exercise_to_delete.pk})
         response = self.client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -319,7 +319,7 @@ class ExerciseTest(APITestCase):
         }
         exercise_to_edit = Exercise.objects.get(owner=self.owner.pk, name="exercise 1")
 
-        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_id": exercise_to_edit.pk})
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_pk": exercise_to_edit.pk})
         response = self.client.put(url, json_data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -354,7 +354,7 @@ class ExerciseTest(APITestCase):
         exercise_to_edit = Exercise.objects.get(owner=self.other_user.pk, name="exercise 1")
         exercise_stringified_before = str(model_to_dict(exercise_to_edit))
 
-        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_id": exercise_to_edit.pk})
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_pk": exercise_to_edit.pk})
         response = self.client.put(url, json_data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -380,7 +380,7 @@ class ExerciseTest(APITestCase):
         exercise_to_edit = Exercise.objects.get(owner=self.owner.pk, name="exercise 1")
         exercise_stringified_before = str(model_to_dict(exercise_to_edit))
 
-        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_id": exercise_to_edit.pk})
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_pk": exercise_to_edit.pk})
         response = self.client.put(url, json_data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -413,7 +413,7 @@ class ExerciseTest(APITestCase):
         exercise_to_edit = Exercise.objects.get(owner=self.owner.pk, name="exercise 1")
         exercise_stringified_before = str(model_to_dict(exercise_to_edit))
 
-        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_id": exercise_to_edit.pk})
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_pk": exercise_to_edit.pk})
         response = self.client.put(url, json_data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -427,7 +427,7 @@ class ExerciseTest(APITestCase):
         """Fork other user's exercise when this is permitted (no name collision)."""
         exercise_to_fork = Exercise.objects.get(owner=self.other_user.pk, name="fork me")
 
-        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_id": exercise_to_fork.pk})
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_pk": exercise_to_fork.pk})
         response = self.client.post(url)
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -454,7 +454,7 @@ class ExerciseTest(APITestCase):
         n_exercises_before = len(Exercise.objects.all())
         exercise_to_fork = Exercise.objects.get(owner=self.other_user.pk, name="exercise 1")
 
-        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_id": exercise_to_fork.pk})
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_pk": exercise_to_fork.pk})
         response = self.client.post(url)
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -465,7 +465,7 @@ class ExerciseTest(APITestCase):
         n_exercises_before = len(Exercise.objects.all())
         exercise_to_fork = Exercise.objects.get(owner=self.owner.pk, name="exercise 1")
 
-        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_id": exercise_to_fork.pk})
+        url = reverse(self.DETAIL_URLPATTERN_NAME, kwargs={"exercise_pk": exercise_to_fork.pk})
         response = self.client.post(url)
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

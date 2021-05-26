@@ -49,7 +49,7 @@ class WorkoutLogEntryNestedSerializer(WorkoutLogEntrySerializer):
     Notes:
         It differs from original version by setting workout field to read only since when we upload
         workout data we don't know workout pk in advance (it is not yet created in the db). Unique
-        together validator is also remove to avoid conflicts with existing workouts – integrity
+        together validator is also removed to avoid conflicts with existing workouts – integrity
         related to set numbers is validated on the WorkoutSerializer (object level validation).
     """
 
@@ -84,9 +84,8 @@ class WorkoutSerializer(serializers.ModelSerializer):
 
     def validate_routine(self, routine):
         # Validate only if routine is specified, skip for None or empty string
-        if routine:
-            if routine.owner != self.context["request"].user:
-                raise ValidationError("This is not your routine.")
+        if routine and routine.owner != self.context["request"].user:
+            raise ValidationError("This is not your routine.")
         return routine
 
     def validate(self, data):
@@ -146,7 +145,7 @@ class WorkoutSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         instance.date = validated_data.pop("date")
         instance.completed = validated_data.pop("completed")
-        instance.routine = validated_data.pop("routine")
+        instance.routine = validated_data.pop("routine", None)
 
         # Clear and setup again many to many relations
         log_entries = validated_data.pop("log_entries", [])
